@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <group android:checkableBehavior="single"
+        android:id="@+id/menu_top">
+        <item
+            android:id="@+id/nav_camera"
+            android:icon="@drawable/ic_account"
+            android:title="@string/nav_my_profile" />
+        <item
+            android:id="@+id/nav_gallery"
+            android:icon="@drawable/ic_message_text"
+            android:title="@string/nav_dialogs" />
+        <item
+            android:id="@+id/nav_slideshow"
+            android:icon="@drawable/ic_account_multiple"
+            android:title="@string/nav_contacts" />
+        <item
+            android:id="@+id/nav_manage"
+            android:icon="@drawable/ic_dialpad"
+            android:title="@string/nav_dialing" />
+    </group>
+
+    <group
+        android:checkableBehavior="none"
+        android:id="@+id/menu_exit">
+        <item
+            android:id="@+id/nav_exit"
+            android:icon="@drawable/ic_exit_to_app"
+            android:title="@string/nav_exit" />
+    </group>
+
+</menu>
