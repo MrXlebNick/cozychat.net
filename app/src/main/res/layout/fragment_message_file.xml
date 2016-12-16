@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/author"
+        android:textSize="10sp"
+        android:text="Артём"/>
+
+    <ImageView
+        android:id="@+id/message"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:gravity="center"
+        android:textAlignment="center"
+        android:padding="6dp"
+        android:layout_below="@id/author"
+        android:layout_alignParentRight="true"
+        android:textColor="#000"
+        app:srcCompat="@drawable/ic_insert_drive_file_white_48dp"
+        android:background="@drawable/message_bubble"/>
+    <FrameLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:layout_alignBaseline="@+id/message"
+        android:layout_alignBottom="@id/message"
+        android:layout_alignEnd="@+id/message"
+        android:layout_alignLeft="@id/message"
+        android:layout_alignRight="@id/message"
+        android:layout_alignStart="@id/message"
+        android:layout_alignTop="@id/message">
+        <com.github.rahatarmanahmed.cpv.CircularProgressView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center"
+            android:visibility="gone"
+            android:tint="@color/colorPrimary"
+            style="@style/Base.Widget.AppCompat.ProgressBar"
+            android:indeterminate="false"
+            android:id="@+id/loading_status"
+            app:cpv_indeterminate="true"
+            app:cpv_maxProgress="100"/>
+        <android.support.v7.widget.AppCompatImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:id="@+id/action"
+            android:padding="6dp"
+            android:layout_gravity="center"
+            app:srcCompat="@drawable/ic_close_red_900_48dp"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/bytes"
+            android:maxEms="4"
+            android:text="34854/34"/>
+    </FrameLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/time"
+        android:layout_alignBottom="@id/message"
+        android:textSize="10sp"
+        android:minWidth="20dp"
+        android:paddingRight="4dp"
+        android:text="20:02"/>
+
+
+</RelativeLayout>

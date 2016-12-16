@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">CMessenger</string>
+    <string name="app_name">Geechat</string>
 
     <!-- Strings related to login -->
     <string name="prompt_email">Email</string>
@@ -28,4 +28,6 @@
     <string name="nav_dialogs">Диалоги</string>
     <string name="nav_contacts">Контакты</string>
     <string name="nav_dialing">Вызов</string>
+    <string name="crash_report_sent">Crash report has been sent</string>
+    <string name="title_activity_profile_info">ProfileInfoActivity</string>
 </resources>

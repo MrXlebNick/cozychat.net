@@ -1,0 +1,35 @@
+{
+  "project_info": {
+    "project_number": "1005436262624",
+    "project_id": "firebase-geechat"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1005436262624:android:b3ae8a93eb739dad",
+        "android_client_info": {
+          "package_name": "net.xlebnick.geechat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDvCKpqxcvK32Sd9gPZfoOR6bFwKBRiUoY"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 1
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

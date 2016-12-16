@@ -1,9 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.v7.widget.RecyclerView xmlns:android="http://schemas.android.com/apk/res/android"
+
+<android.support.design.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/list"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:layout_marginLeft="16dp"
-    android:layout_marginRight="16dp"
-    app:layoutManager="LinearLayoutManager" />
+    android:layout_height="match_parent">
+
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/list"
+        android:layout_width="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
+        android:layout_height="match_parent"
+        android:layout_marginLeft="16dp"
+        android:layout_marginRight="16dp"
+        app:layoutManager="LinearLayoutManager" />
+
+    <android.support.design.widget.FloatingActionButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:srcCompat="@drawable/ic_plus"
+        android:padding="16dp"
+        android:layout_margin="16dp"
+        android:id="@+id/fab"
+        android:layout_gravity="bottom|right|end"
+        />
+    <!--<LinearLayout-->
+        <!--android:layout_width="wrap_content"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--app:layout_anchor="@messageId/list"-->
+        <!--android:padding="16dp"-->
+        <!--android:layout_gravity="bottom|right|end"-->
+        <!--app:layout_anchorGravity="bottom|right|end">-->
+
+        <!--<TextView-->
+            <!--android:layout_width="wrap_content"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:layout_gravity="center"-->
+            <!--android:text="Invite friend"-->
+            <!--android:padding="4dp"-->
+            <!--android:elevation="16dp"-->
+            <!--android:background="#666"-->
+            <!--android:shadowDx="4"-->
+            <!--android:shadowDy="4"-->
+            <!--android:shadowColor="#333"-->
+            <!--android:shadowRadius="90"-->
+            <!--android:textColor="@android:color/white"/>-->
+
+
+    <!--</LinearLayout>-->
+</android.support.design.widget.CoordinatorLayout>
