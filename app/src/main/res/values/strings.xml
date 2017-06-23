@@ -1,33 +1,49 @@
 <resources>
-    <string name="app_name">Geechat</string>
+    <string name="app_name">Messiah</string>
 
     <!-- Strings related to login -->
-    <string name="prompt_email">Email</string>
+    <string name="prompt_email" translatable="false">Email</string>
     <string name="prompt_password">Password (optional)</string>
     <string name="action_sign_in">Get me in</string>
     <string name="action_sign_in_short">Sign in</string>
     <string name="error_invalid_email">This email address is invalid</string>
     <string name="error_invalid_password">This password is too short</string>
     <string name="error_incorrect_password">This password is incorrect</string>
-    <string name="error_field_required">This field is required</string>
-    <string name="permission_rationale">"Contacts permissions are needed for providing email
+    <string name="permission_rationale" translatable="false">"Contacts permissions are needed for providing email
         completions."
     </string>
     <string name="prompt_phone">Phone</string>
-    <string name="title_activity_template">TemplateActivity</string>
+    <string name="title_activity_template" translatable="false">TemplateActivity</string>
 
-    <string name="navigation_drawer_open">Open navigation drawer</string>
-    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="navigation_drawer_open" translatable="false">Open navigation drawer</string>
+    <string name="navigation_drawer_close" translatable="false">Close navigation drawer</string>
 
     <string name="action_settings">Settings</string>
 
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
-    <string name="nav_exit">Выход</string>
-    <string name="nav_my_profile">Мой профиль</string>
-    <string name="nav_dialogs">Диалоги</string>
-    <string name="nav_contacts">Контакты</string>
-    <string name="nav_dialing">Вызов</string>
     <string name="crash_report_sent">Crash report has been sent</string>
-    <string name="title_activity_profile_info">ProfileInfoActivity</string>
-</resources>
+    <string name="title_activity_profile_info" translatable="false">ProfileInfoActivity</string>
+    <string name="error_field_required">This field is required</string>
+    <string name="nav_contacts">Contacts</string>
+    <string name="nav_dialing">Dial</string>
+    <string name="nav_dialogs">Dialogs</string>
+    <string name="nav_exit">Exit</string>
+    <string name="nav_my_profile">My profile</string>
+    <string name="enter_something_first">Enter something first</string>
+    <string name="user_already_in_contact_list">User is already in your friend list</string>
+    <string name="user_is_registered_but_not_friended">User is registered, but missing in your contacts</string>
+    <string name="user_not_using_app">User is not using GeeChat, invite!</string>
+    <string name="cancel">Cancel</string>
+    <string name="enter_phone">Enter phone</string>
+    <string name="invite">Invite</string>
+    <string name="you">You</string>
+    <string name="error_in_opening_file">"An error during opening file, reason: "</string>
+    <string name="choose_from_gallery">Choose from Gallery</string>
+    <string name="choose_from_file">Choose from files</string>
+    <string name="elect_pic">Select Picture</string>
+    <string name="select_file">Select a File</string>
+    <string name="contacts">Contacts</string>
+    <string name="dialogs">Chats</string>
+
+   </resources>

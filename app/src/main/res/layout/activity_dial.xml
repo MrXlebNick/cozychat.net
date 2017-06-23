@@ -10,7 +10,7 @@
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
     android:background="@drawable/dial_screen_call_active_background"
-    tools:context="net.xlebnick.geechat.activity.DialActivity">
+    tools:context="com.messiah.messenger.activity.DialActivity">
     <com.makeramen.roundedimageview.RoundedImageView
         android:layout_width="80dp"
         android:layout_height="80dp"

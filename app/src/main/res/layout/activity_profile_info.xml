@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
     android:orientation="vertical"
-    tools:context="net.xlebnick.geechat.ProfileInfoFragment">
+    tools:context="com.messiah.messenger.fragment.ProfileInfoFragment">
 
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/fab"

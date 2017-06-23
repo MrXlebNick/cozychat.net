@@ -26,6 +26,16 @@
         android:textColor="#000"
         app:srcCompat="@drawable/ic_insert_drive_file_white_48dp"
         android:background="@drawable/message_bubble"/>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/bytes"
+        android:maxEms="4"
+        android:visibility="gone"
+        android:gravity="center"
+        android:layout_alignRight="@+id/message"
+        android:layout_alignLeft="@+id/message"
+        android:layout_alignBottom="@+id/message"/>
     <FrameLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -37,17 +47,6 @@
         android:layout_alignRight="@id/message"
         android:layout_alignStart="@id/message"
         android:layout_alignTop="@id/message">
-        <com.github.rahatarmanahmed.cpv.CircularProgressView
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_gravity="center"
-            android:visibility="gone"
-            android:tint="@color/colorPrimary"
-            style="@style/Base.Widget.AppCompat.ProgressBar"
-            android:indeterminate="false"
-            android:id="@+id/loading_status"
-            app:cpv_indeterminate="true"
-            app:cpv_maxProgress="100"/>
         <android.support.v7.widget.AppCompatImageView
             android:layout_width="40dp"
             android:layout_height="40dp"
@@ -55,13 +54,22 @@
             android:padding="6dp"
             android:layout_gravity="center"
             app:srcCompat="@drawable/ic_close_red_900_48dp"/>
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/bytes"
-            android:maxEms="4"
-            android:text="34854/34"/>
+        <com.github.rahatarmanahmed.cpv.CircularProgressView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center"
+            android:tint="@color/colorPrimary"
+            style="@style/Base.Widget.AppCompat.ProgressBar"
+            android:indeterminate="true"
+            android:id="@+id/loading_status"
+            app:cpv_indeterminate="true"
+            app:cpv_maxProgress="100"/>
     </FrameLayout>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/name"
+        android:layout_below="@+id/message"/>
 
     <TextView
         android:layout_width="wrap_content"

@@ -5,16 +5,36 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
 
-    style="@style/AppTheme.TiledBackground">
+    style="@style/AppTheme.TiledBackground"
+    xmlns:emojicon="http://schemas.android.com/tools">
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/new_message_block"
         android:background="#FFF"
-        android:layout_alignParentBottom="true">
+        android:layout_alignParentBottom="true"
+        >
+
+
+        <com.github.rahatarmanahmed.cpv.CircularProgressView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:tint="@color/colorPrimary"
+            android:indeterminate="false"
+            android:id="@+id/sending"
+            app:cpv_indeterminate="true"
+            android:visibility="gone"
+            android:layout_margin="4dp"
+            android:layout_alignParentEnd="true"
+            app:cpv_maxProgress="100"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            />
+
         <android.support.v7.widget.AppCompatImageView
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
+            android:visibility="visible"
             android:layout_alignParentEnd="true"
             app:srcCompat="@drawable/ic_menu_send"
             android:layout_alignParentRight="true"
@@ -24,20 +44,30 @@
         <android.support.v7.widget.AppCompatImageView
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
+            app:srcCompat="@drawable/ic_insert_emoticon_black_24dp"
+            android:layout_toLeftOf="@id/btn_send"
+            android:layout_toStartOf="@id/btn_send"
+            android:layout_centerVertical="true"
+            android:layout_margin="4dp"
+            android:id="@+id/btn_show_emoji"/>
+        <android.support.v7.widget.AppCompatImageView
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
             android:layout_alignParentStart="true"
             app:srcCompat="@drawable/attachment"
             android:layout_alignParentLeft="true"
             android:layout_centerVertical="true"
             android:layout_margin="4dp"
             android:id="@+id/btn_attach"/>
-        <EditText
+
+        <io.github.rockerhieu.emojicon.EmojiconEditText
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Enter your message right here"
             android:id="@+id/edit_text"
             android:layout_centerVertical="true"
-            android:layout_toLeftOf="@+id/btn_send"
-            android:layout_toStartOf="@+id/btn_send"
+            android:layout_toLeftOf="@+id/btn_show_emoji"
+            android:layout_toStartOf="@+id/btn_show_emoji"
             android:layout_toRightOf="@+id/btn_attach"
             android:layout_toEndOf="@+id/btn_attach"/>
     </RelativeLayout>
@@ -59,7 +89,28 @@
         android:layout_above="@+id/new_message_block"
         android:layout_height="match_parent"
         app:layoutManager="LinearLayoutManager"
-        tools:context="net.xlebnick.geechat.fragment.MessageFragment"
+        tools:context="com.messiah.messenger.fragment.MessageFragment"
         tools:listitem="@layout/fragment_message" >
     </android.support.v7.widget.RecyclerView>
+
+
+    <io.github.rockerhieu.emojicon.EmojiconGridView
+        android:id="@+id/emojicons_view"
+        emojicon:emojiconSize="36dip"
+        android:numColumns="12"
+        android:scaleY="1.5"
+        android:scaleX="1.5"
+        android:layout_width="match_parent"
+        android:visibility="gone"
+        android:layout_height="133dp"
+        android:background="@color/tw__light_gray"
+        android:layout_alignParentBottom="true" />
+
+    <!--<fragment-->
+        <!--android:id="@+id/emojicons"-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="220dp"-->
+        <!--class="io.github.rockerhieu.emojicon.EmojiconsFragment"-->
+        <!--/>-->
+
 </RelativeLayout>

@@ -24,12 +24,6 @@
             android:layout_height="wrap_content"
             android:text="sdcsdc"/>
     </LinearLayout>
-    <ImageView
-        android:layout_width="14dp"
-        android:layout_height="14dp"
-        android:id="@+id/marker"
-        android:src="@drawable/marker_unread"
-        android:layout_gravity="center_vertical|end"/>
 
 </FrameLayout>
 

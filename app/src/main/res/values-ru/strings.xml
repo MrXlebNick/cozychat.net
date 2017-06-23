@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Messiah</string>
+    <string name="error_field_required">Это поле нужно заполнить</string>
+    <string name="action_settings">Настройки</string>
+    <string name="action_sign_in">Войти</string>
+    <string name="action_sign_in_short">Войти</string>
+    <string name="crash_report_sent">Отчет об ошибке отправлен</string>
+    <string name="nav_dialogs">Диалоги</string>
+    <string name="nav_exit">Выход</string>
+    <string name="nav_my_profile">Мой профиль</string>
+    <string name="prompt_password">Пароль</string>
+    <string name="prompt_phone">Телефон</string>
+    <string name="nav_dialing">Вызов</string>
+    <string name="nav_contacts">Контакты</string>
+    <string name="error_invalid_password">Слишком короткий пароль</string>
+    <string name="error_invalid_email">Неверный формат email\'a</string>
+    <string name="error_incorrect_password">Неверный пароль</string>
+    <string name="contacts">Контакты</string>
+    <string name="dialogs">Чаты</string>
+    <string name="you">Вы</string>
+    <string name="user_not_using_app">Пользователь еще не использует GeeChat, пригласите его!</string>
+    <string name="user_is_registered_but_not_friended">Пользователь заргистрирован, но отсутствует в Ваших контактах</string>
+    <string name="user_already_in_contact_list">Пользователь уже в друзьях</string>
+    <string name="select_file">Выберите файл</string>
+    <string name="invite">Пригласить</string>
+    <string name="error_in_opening_file">"Ошибка при открытии фала, причина: "</string>
+    <string name="enter_something_first">Введите что-нибудь сначала</string>
+    <string name="enter_phone">Введите номер</string>
+    <string name="elect_pic">Выберите картинку</string>
+    <string name="choose_from_gallery">Выбрать из галереи</string>
+    <string name="choose_from_file">Выбрать из файлов</string>
+    <string name="cancel">Отменить</string>
+    <string name="hello_blank_fragment">hello_blank_fragment</string>
+    </resources>

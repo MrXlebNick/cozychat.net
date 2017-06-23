@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="net.xlebnick.geechat">
+    package="com.messiah.messenger">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
@@ -13,43 +13,46 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
+
     <permission
         android:name="com.github.hathibelagal.pn.permission.C2D_MESSAGE"
         android:protectionLevel="signature" />
 
     <uses-permission android:name="com.github.hathibelagal.pn.permission.C2D_MESSAGE" />
 
-    <uses-feature android:name="android.hardware.sip.voip" />
-    <uses-feature
-        android:name="android.hardware.wifi"
-        android:required="true" />
     <uses-feature
         android:name="android.hardware.microphone"
         android:required="true" />
-
+    <supports-screens android:resizeable="true"
+                      android:smallScreens="true"
+                      android:normalScreens="true"
+                      android:largeScreens="true"
+                      android:xlargeScreens="true"
+                      android:anyDensity="true" />
     <application
-        android:name=".CozyChatApplication"
+        android:name="com.messiah.messenger.CozyChatApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
 
         android:theme="@style/AppTheme">
+
         <meta-data
             android:name="DATABASE"
-            android:value="geechat" />
+            android:value="messiah" />
         <meta-data
             android:name="VERSION"
-            android:value="3" />
+            android:value="10" />
         <meta-data
             android:name="QUERY_LOG"
             android:value="true" />
         <meta-data
             android:name="DOMAIN_PACKAGE_NAME"
-            android:value="net.xlebnick.geechat" />
+            android:value="com.messiah.messenger" />
 
         <activity
-            android:name=".activity.LoginActivity"
+            android:name="com.messiah.messenger.activity.LoginActivity"
             android:screenOrientation="portrait"
             android:label="@string/app_name">
             <intent-filter>
@@ -60,14 +63,14 @@
         </activity>
 
         <receiver
-            android:name=".IncomingCallReceiver"
+            android:name="com.messiah.messenger.receiver.IncomingCallReceiver"
             android:label="Call Receiver" />
-        <receiver android:name=".BootBroadcastReceiver">
+        <receiver android:name="com.messiah.messenger.receiver.BootBroadcastReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
-        <receiver android:name=".NetworkChangeReceiver">
+        <receiver android:name="com.messiah.messenger.receiver.NetworkChangeReceiver">
             <intent-filter>
                 <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
                 <action android:name="android.net.wifi.WIFI_STATE_CHANGED" />
@@ -79,18 +82,18 @@
             android:value="db27a07201057300ff9d7ed8da8b471271550ebe" />
 
         <activity
-            android:name=".activity.MainActivity"
+            android:name="com.messiah.messenger.activity.MainActivity"
             android:screenOrientation="portrait"
             android:label="@string/title_activity_template"
             android:theme="@style/AppTheme.NoActionBar" />
 
         <service
-            android:name=".ListenForMessagesService"
+            android:name="com.messiah.messenger.service.ListenForMessagesService"
             android:enabled="true"
             android:exported="true" />
 
         <activity
-            android:name=".activity.DialActivity"
+            android:name="com.messiah.messenger.activity.DialActivity"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
 
@@ -104,21 +107,21 @@
             </intent-filter>
         </receiver>
         <service
-            android:name=".MyGcmListenerService"
+            android:name="com.messiah.messenger.service.MyGcmListenerService"
             android:exported="false" >
             <intent-filter>
                 <action android:name="com.google.android.c2dm.intent.RECEIVE" />
             </intent-filter>
         </service>
         <service
-            android:name=".MyInstanceIDListenerService"
+            android:name="com.messiah.messenger.service.MyInstanceIDListenerService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.android.gms.iid.InstanceID" />
             </intent-filter>
         </service>
         <service
-            android:name=".RegistrationIntentService"
+            android:name="com.messiah.messenger.service.RegistrationIntentService"
             android:exported="false">
         </service>
     </application>
