@@ -64,6 +64,7 @@ public class MainActivity extends AppCompatActivity
             finish();
         }
 
+        SipHelper.getInstance().register();
         Log.d("***", SipManager.isVoipSupported(this)  + " " + SipManager.isApiSupported(this));
         setContentView(R.layout.activity_template);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);

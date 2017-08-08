@@ -148,7 +148,7 @@ public class MessageFragment extends LoadableFragment implements Observer {
                 message.save();
                 onLoadStart();
 //
-//                FileManager fileManager = new Retrofit.Builder().baseUrl("http://http://ec2-34-208-141-31.us-west-2.compute.amazonaws.com:8080")
+//                FileManager fileManager = new Retrofit.Builder().baseUrl("http://http://ec2-35-165-67-249.us-west-2.compute.amazonaws.com:8080")
 //                        .build().create(FileManager.class);
 //                File file = new File(filePath);
 //
@@ -413,8 +413,11 @@ public class MessageFragment extends LoadableFragment implements Observer {
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
-        menu.add(0, 1, 0, "Call");
+        inflater.inflate(R.menu.message_list_menu, menu);
+//        menu.add(0, 1, 0, "Call");
     }
+
+
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {

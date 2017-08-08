@@ -80,7 +80,8 @@ public class DialActivity extends AppCompatActivity {
             public void onCallEstablished(SipAudioCall call) {
 
                 super.onCallEstablished(call);
-                Log.d("***", "onCallEstablished");
+                Log.d("***", "onCallEstablished " + call.isInCall() + " " + call.getState());
+
 
                 call.startAudio();
                 Log.d("***", "onCallEstablished1");
@@ -89,7 +90,7 @@ public class DialActivity extends AppCompatActivity {
                 if (call.isMuted())
                     call.toggleMute();
                 Log.d("***", "onCallEstablished3");
-                startCall();
+                showCall();
                 Log.d("***", "onCallEstablished4");
 
             }
@@ -97,21 +98,15 @@ public class DialActivity extends AppCompatActivity {
             @Override
             public void onCallEnded(SipAudioCall call) {
                 Log.d("***", "onCallEnded");
-
-                try {
-                    call.endCall();
-                } catch (SipException e) {
-                    e.printStackTrace();
-                }
-
                 endCall();
+                super.onCallEnded(call);
 
             }
 
             @Override
             public void onCallBusy(SipAudioCall call) {
                 Log.d("***", "onCallBusy");
-                super.onCallBusy(call);
+                endCall("Busy");
             }
 
             @Override
@@ -123,13 +118,13 @@ public class DialActivity extends AppCompatActivity {
             @Override
             public void onError(SipAudioCall call, int errorCode, final String errorMessage) {
                 Log.d("***", "onError " + errorMessage + " " + errorCode);
-                DialActivity.this.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(DialActivity.this, "Error has occured, reason: " + errorMessage, Toast.LENGTH_LONG).show();
-                    }
-                });
-                endCall();
+//                DialActivity.this.runOnUiThread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        Toast.makeText(DialActivity.this, "Error has occured, reason: " + errorMessage, Toast.LENGTH_LONG).show();
+//                    }
+//                });
+                endCall("Error: message");
                 super.onError(call, errorCode, errorMessage);
             }
 
@@ -159,26 +154,23 @@ public class DialActivity extends AppCompatActivity {
         hangupButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                try {
-                    SipHelper.getInstance(DialActivity.this).call.endCall();
-                } catch (SipException e) {
-                    e.printStackTrace();
-                }
+                Log.d("***", SipHelper.getInstance().call.getState() + " is state" );
+                SipHelper.getInstance().endCall();
                 endCall();
             }
         });
         takeButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                SipHelper.getInstance(DialActivity.this).takeCall(getIntent(), listener);
-                startCall();
+                SipHelper.getInstance().takeCall(getIntent(), listener);
+                showCall();
             }
         });
         declineButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 try {
-                    SipHelper.getInstance(DialActivity.this).call.endCall();
+                    SipHelper.getInstance().call.endCall();
                 } catch (SipException e) {
                     e.printStackTrace();
                 }
@@ -195,8 +187,7 @@ public class DialActivity extends AppCompatActivity {
                 displayCall();
 
             } else {
-                Log.d("***", "sip:" + getIntent().getStringExtra("sip") + "@ec2-34-208-141-31.us-west-2.compute.amazonaws.com");
-                SipHelper.getInstance(this).call("sip:" + getIntent().getStringExtra("sip") + "@ec2-34-208-141-31.us-west-2.compute.amazonaws.com", listener);
+                SipHelper.getInstance().call(getIntent().getStringExtra("sip"), listener);
                 tryToDial();
             }
         }
@@ -204,7 +195,7 @@ public class DialActivity extends AppCompatActivity {
 
     }
 
-    private void startCall() {
+    private void showCall() {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -232,10 +223,11 @@ public class DialActivity extends AppCompatActivity {
 
     }
 
-    private void endCall() {
-        updateStatus("Ended");
-        Log.d("***", "ending call");
 
+    private void endCall(){
+        endCall("Ended");
+    }
+    private void endCall(String message) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -260,6 +252,10 @@ public class DialActivity extends AppCompatActivity {
                 }, 2000);
             }
         });
+        Log.d("***", "ending call");
+        updateStatus(message);
+        SipHelper.getInstance().endCall();
+
 
 
     }

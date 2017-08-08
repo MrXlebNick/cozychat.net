@@ -213,9 +213,9 @@ public class SmackConnection implements ConnectionListener, ChatManagerListener,
                     if (!user.mPhoneNumber.equals(mLogin))
                         users.add(user);
                 }
-                VCard card = VCardManager.getInstanceFor(mConnection).loadVCard("xlebnick@cozychat.net");
-                card.setPhoneWork("VOICE", "6002");
-                card.save(mConnection);
+//                VCard card = VCardManager.getInstanceFor(mConnection).loadVCard("xlebnick@cozychat.net");
+//                card.setPhoneWork("VOICE", "6001");
+//                card.save(mConnection);
                 return users;
             } else {
                 Log.d("***", "No result found");

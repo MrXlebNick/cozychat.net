@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.sip.SipManager;
+import android.util.Log;
 
 import com.messiah.messenger.activity.DialActivity;
 
@@ -20,6 +21,7 @@ public class IncomingCallReceiver extends BroadcastReceiver {
      */
     @Override
     public void onReceive(Context context, Intent intent) {
+        Log.d("***", "someone is calling");
         Intent startActivityIntent = new Intent(context, DialActivity.class);
         startActivityIntent.putExtras(intent);
         startActivityIntent.putExtra(DialActivity.IS_INCOMING_CALL, true);

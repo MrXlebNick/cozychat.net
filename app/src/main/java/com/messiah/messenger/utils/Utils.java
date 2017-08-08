@@ -166,7 +166,7 @@ public class Utils {
 
 
     public static String getSipNumber(Context context) {
-        return context.getSharedPreferences(DB_NAME, Context.MODE_PRIVATE).getString(SPREFS_FIELD_SIP, null);
+        return context.getSharedPreferences(DB_NAME, Context.MODE_PRIVATE).getString(SPREFS_FIELD_SIP, "6002");
     }
 
 

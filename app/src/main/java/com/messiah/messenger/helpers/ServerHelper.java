@@ -66,7 +66,7 @@ public class ServerHelper extends Observable implements ChatMessageListener {
     public static final String FROM_EXTRA = "cozychat.net.FROM_EXTRA";
     public static final String TIME_EXTRA = "cozychat.net.DATE_EXTRA";
     public static final String MESSAGE_EXTRA = "cozychat.net.MESSAGE_EXTRA";
-    private static final String SERVICE_NAME = "ec2-34-208-141-31.us-west-2.compute.amazonaws.com";
+    private static final String SERVICE_NAME = "ec2-35-165-67-249.us-west-2.compute.amazonaws.com";
     private static ServerHelper mInstance;
     private String mLogin;
     private AbstractXMPPConnection mConnection;

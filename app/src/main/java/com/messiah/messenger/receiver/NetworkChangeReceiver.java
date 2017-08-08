@@ -31,7 +31,7 @@ public class NetworkChangeReceiver extends BroadcastReceiver {
                 @Override
                 protected Void doInBackground(Void... params) {
                     ServerHelper.getInstance(context).initConnection(Utils.getPhoneNumber(context));
-                    SipHelper.getInstance(context).register("6001");
+                    SipHelper.getInstance().register();
                     return null;
                 }
             }.execute();

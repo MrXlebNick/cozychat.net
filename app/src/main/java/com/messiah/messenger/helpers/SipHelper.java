@@ -12,6 +12,9 @@ import android.net.sip.SipRegistrationListener;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.messiah.messenger.CozyChatApplication;
+import com.messiah.messenger.utils.Utils;
+
 import org.acra.ACRA;
 
 import java.text.ParseException;
@@ -24,53 +27,45 @@ import xdroid.toaster.Toaster;
 
 public class SipHelper {
 
-    public static SipHelper instance = null;
-    private final Context mContext;
-    public SipManager mSipManager = null;
-    public SipProfile mSipProfile = null;
+    private static final String SERVER_DOMAIN = "ec2-35-165-67-249.us-west-2.compute.amazonaws.com";
+    private static SipHelper instance = null;
+    private SipManager mSipManager = null;
+    private SipProfile mSipProfile = null;
     public SipAudioCall call;
 
-    private SipHelper(Context context) {
-
-        if (mSipManager == null) {
-            mSipManager = SipManager.newInstance(context);
-        }
-        mContext = context;
+    private SipHelper() {
+        mSipManager = SipManager.newInstance(CozyChatApplication.getContext());
 
     }
 
-    public SipHelper() {
-        mContext = null;
-    }
-
-    public static SipHelper getInstance(Context context) {
-        if (!(SipManager.isApiSupported(context) && SipManager.isVoipSupported(context))){
-            Toaster.toast("Your device does not support SIP");
-            return new SipHelper();
-        }
+    public static SipHelper getInstance() {
+//        if (!(SipManager.isApiSupported(context) && SipManager.isVoipSupported(context))){
+//            Toaster.toast("Your device does not support SIP");
+//            return new SipHelper();
+//        }
         if (instance == null)
-            instance = new SipHelper(context);
+            instance = new SipHelper();
         return instance;
     }
 
-    public void register(final String sipNumber) {
+    public void register() {
+        String sipNumber = Utils.getSipNumber(CozyChatApplication.getContext());
 
         Log.d("***", "sdcsdcsdcsdcsdcsdcsd");
         SipProfile.Builder builder;
         try {
-            builder = new SipProfile.Builder(sipNumber, "ec2-34-208-141-31.us-west-2.compute.amazonaws.com");
+            builder = new SipProfile.Builder(sipNumber, SERVER_DOMAIN);
             builder.setPassword("unsecurepassword");
-            builder.setOutboundProxy("ec2-34-208-141-31.us-west-2.compute.amazonaws.com");
+            builder.setOutboundProxy(SERVER_DOMAIN);
             builder.setPort(5060);
             mSipProfile = builder.build();
 
             Intent intent = new Intent();
             intent.setAction("android.SipDemo.INCOMING_CALL");
-            final PendingIntent pendingIntent = PendingIntent.getBroadcast(mContext, 0, intent, Intent.FILL_IN_DATA);
+            final PendingIntent pendingIntent = PendingIntent.getBroadcast(CozyChatApplication.getContext(), 0, intent, Intent.FILL_IN_DATA);
 
-            Log.d("***", " " + SipManager.isVoipSupported(mContext) + " " + SipManager.isApiSupported(mContext));
+            Log.d("***", " " + SipManager.isVoipSupported(CozyChatApplication.getContext()) + " " + SipManager.isApiSupported(CozyChatApplication.getContext()));
 
-            mSipManager.open(mSipProfile, pendingIntent, null);
             mSipManager.setRegistrationListener(mSipProfile.getUriString(), new SipRegistrationListener() {
 
                 public void onRegistering(String localProfileUri) {
@@ -89,7 +84,7 @@ public class SipHelper {
                                 Log.d("***", "already exists");
                                 mSipManager.close(mSipProfile.getUriString());
                                 Log.d("***", "over and over");
-                                register(sipNumber);
+                                register();
                             } else {
                                 mSipManager.close(mSipProfile.getUriString());
                                 mSipManager.open(mSipProfile);
@@ -103,6 +98,9 @@ public class SipHelper {
 
                 }
             });
+            mSipManager.open(mSipProfile, pendingIntent, null);
+            mSipManager.register(mSipProfile, 3600, null);
+//            mSipManager.unregister(mSipProfile, null);
         } catch (ParseException | SipException e) {
             e.printStackTrace();
         }
@@ -110,14 +108,15 @@ public class SipHelper {
     }
 
     public void call(String to, SipAudioCall.Listener listener) {
+        to = "sip:" + to + "@" + SERVER_DOMAIN;
         try {
 
-            Log.d("***", mSipProfile.getUriString() + " here " +
+            Log.d("***", "me, " + mSipProfile.getUriString() + ", calls to  " +
                     to);
             call = mSipManager.makeAudioCall(mSipProfile.getUriString(),
                     to,
                     listener,
-                    0);
+                    30);
         } catch (SipException e) {
             e.printStackTrace();
         }
@@ -126,7 +125,7 @@ public class SipHelper {
     public void takeCall(Intent intent, SipAudioCall.Listener listener) {
         try {
             call = mSipManager.takeAudioCall(intent, listener);
-            call.answerCall(0);
+            call.answerCall(10);
             call.startAudio();
             call.setSpeakerMode(true);
             if (call.isMuted()) {
@@ -135,6 +134,17 @@ public class SipHelper {
         } catch (SipException e) {
             e.printStackTrace();
             ACRA.getErrorReporter().handleSilentException(e);
+        }
+    }
+
+    public void endCall() {
+        if (call != null && call.isInCall()){
+            try {
+                call.endCall();
+                call.close();
+            } catch (SipException e) {
+                e.printStackTrace();
+            }
         }
     }
 }

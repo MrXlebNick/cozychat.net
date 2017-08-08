@@ -10,20 +10,19 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/author"
-        android:textSize="10sp"
-        android:text="Артём"/>
+        android:visibility="gone"/>
 
     <io.github.rockerhieu.emojicon.EmojiconTextView
         android:id="@+id/message"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="message"
         android:textSize="16sp"
         android:gravity="center"
         android:textAlignment="center"
         android:padding="6dp"
         android:layout_below="@id/author"
         android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
         android:textColor="#000"
         android:background="@drawable/message_bubble"/>
 
@@ -32,10 +31,11 @@
         android:layout_height="wrap_content"
         android:id="@+id/time"
         android:layout_alignBottom="@id/message"
-        android:textSize="10sp"
+        android:textSize="12sp"
         android:minWidth="20dp"
         android:paddingRight="4dp"
-        android:text="20:02"/>
+        android:paddingEnd="4dp"
+        />
 
 
 </RelativeLayout>

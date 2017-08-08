@@ -1,6 +1,8 @@
 package com.messiah.messenger;
 
+import android.annotation.SuppressLint;
 import android.app.Application;
+import android.content.Context;
 import android.content.IntentFilter;
 import android.widget.Toast;
 
@@ -23,19 +25,20 @@ import org.acra.annotation.ReportsCrashes;
         resToastText = R.string.crash_report_sent
 )
 public class CozyChatApplication extends Application {
+
+    @SuppressLint("StaticFieldLeak")
+    private static Context context;
+
     @Override
     public void onCreate() {
         super.onCreate();
+        context = this;
         SugarContext.init(this);
-
-        IntentFilter filter = new IntentFilter();
-        filter.addAction("android.SipDemo.INCOMING_CALL");
-        IncomingCallReceiver callReceiver = new IncomingCallReceiver();
-        this.registerReceiver(callReceiver, filter);
-
         OomExceptionHandler.install(this);
+    }
 
-//        ACRA.init(this);
+    public static Context getContext(){
+        return context;
     }
 
     @Override

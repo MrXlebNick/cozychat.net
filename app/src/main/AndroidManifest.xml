@@ -63,8 +63,11 @@
         </activity>
 
         <receiver
-            android:name="com.messiah.messenger.receiver.IncomingCallReceiver"
-            android:label="Call Receiver" />
+            android:name="com.messiah.messenger.receiver.IncomingCallReceiver" >
+            <intent-filter>
+                <action android:name="android.SipDemo.INCOMING_CALL" />
+            </intent-filter>
+        </receiver>
         <receiver android:name="com.messiah.messenger.receiver.BootBroadcastReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

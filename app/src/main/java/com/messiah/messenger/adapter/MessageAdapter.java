@@ -61,7 +61,7 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
 //        ServerHelper.getInstance(context).setFileListener(this);
         ServerHelper.getInstance(context).addObserver(this);
         mContext = context;
-        retrofit = new Retrofit.Builder().baseUrl("http://ec2-34-208-141-31.us-west-2.compute.amazonaws.com:8080")
+        retrofit = new Retrofit.Builder().baseUrl("http://ec2-35-165-67-249.us-west-2.compute.amazonaws.com:8080")
                 .addConverterFactory(GsonConverterFactory.create())
                 .build().create(FileIOApi.class);
     }
@@ -153,8 +153,7 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
 
         } else {
 
-
-            viewHolder.mAuthorView.setText(opponent);
+//            viewHolder.mAuthorView.setText(opponent);
 
             lp = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             lp.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
@@ -168,7 +167,7 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
         }
 
 
-        SimpleDateFormat sdf = new SimpleDateFormat("hh:mm dd/MM/yy", Locale.getDefault());
+        SimpleDateFormat sdf = new SimpleDateFormat("hh:mm", Locale.getDefault());
         viewHolder.mDateView.setText(sdf.format(new Date(viewHolder.mItem.time)));
 
 
