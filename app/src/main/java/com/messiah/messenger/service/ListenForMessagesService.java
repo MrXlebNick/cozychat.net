@@ -7,8 +7,7 @@ import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
-import com.messiah.messenger.helpers.ServerHelper;
-import com.messiah.messenger.helpers.SipHelper;
+import com.messiah.messenger.helpers.XmppHelper;
 
 /**
  * Created by XlebNick for CMessenger.
@@ -24,14 +23,14 @@ public class ListenForMessagesService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-
         Log.d("shit", "service onStartCommand");
+
+//        SipHelper.getInstance().register();
 
         new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... params) {
-                ServerHelper.getInstance(getApplicationContext(), null).
-                        setMessageListener();
+                XmppHelper.getInstance().setMessageListener();
 
                 return null;
             }
@@ -39,8 +38,7 @@ public class ListenForMessagesService extends Service {
             @Override
             protected void onPostExecute(Void aVoid) {
                 super.onPostExecute(aVoid);
-                ServerHelper.getInstance(getApplicationContext(), null).
-                        setMessageListener();
+                XmppHelper.getInstance().setMessageListener();
             }
         }.execute();
         return START_STICKY;

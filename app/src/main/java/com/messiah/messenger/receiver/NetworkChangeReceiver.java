@@ -7,9 +7,8 @@ import android.net.ConnectivityManager;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import com.messiah.messenger.helpers.ServerHelper;
+import com.messiah.messenger.helpers.XmppHelper;
 import com.messiah.messenger.helpers.SipHelper;
-import com.messiah.messenger.utils.Utils;
 
 /**
  * Created by XlebNick for CMessenger.
@@ -30,7 +29,7 @@ public class NetworkChangeReceiver extends BroadcastReceiver {
             new AsyncTask<Void, Void, Void>() {
                 @Override
                 protected Void doInBackground(Void... params) {
-                    ServerHelper.getInstance(context).initConnection(Utils.getPhoneNumber(context));
+                    XmppHelper.getInstance().connect();
                     SipHelper.getInstance().register();
                     return null;
                 }

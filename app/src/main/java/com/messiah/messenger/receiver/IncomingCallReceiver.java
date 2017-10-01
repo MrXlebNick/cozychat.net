@@ -6,7 +6,11 @@ import android.content.Intent;
 import android.net.sip.SipManager;
 import android.util.Log;
 
+import com.messiah.messenger.Constants;
 import com.messiah.messenger.activity.DialActivity;
+import com.messiah.messenger.helpers.SipHelper;
+import com.messiah.messenger.model.Message;
+import com.messiah.messenger.utils.Utils;
 
 /**
  * Created by XlebNick for CMessenger.
@@ -21,12 +25,27 @@ public class IncomingCallReceiver extends BroadcastReceiver {
      */
     @Override
     public void onReceive(Context context, Intent intent) {
-        Log.d("***", "someone is calling");
-        Intent startActivityIntent = new Intent(context, DialActivity.class);
-        startActivityIntent.putExtras(intent);
-        startActivityIntent.putExtra(DialActivity.IS_INCOMING_CALL, true);
-        startActivityIntent.putExtra(SipManager.EXTRA_OFFER_SD, intent.getStringExtra(SipManager.EXTRA_OFFER_SD));
-        startActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        context.startActivity(startActivityIntent);
+        Message callMessage = new Message();
+        callMessage.messageId = intent.getStringExtra(SipManager.EXTRA_CALL_ID);
+        callMessage.receiver = Utils.getPhoneNumber(context);
+        callMessage.time = System.currentTimeMillis();
+        callMessage.type = Constants.MESSAGE_TYPE_CALL;
+        callMessage.isFromMe = false;
+        callMessage.read = true;
+        callMessage.sender = SipHelper.getInstance().getCallee(intent);
+//        long callMessageId = callMessage.save();
+//        if (callMessageId != -1){
+
+            Log.d("***", "someone is calling " + SipHelper.getInstance().getCallee(intent));
+            Intent startActivityIntent = new Intent(context, DialActivity.class);
+            startActivityIntent.putExtras(intent);
+            startActivityIntent.putExtra(DialActivity.IS_INCOMING_CALL, true);
+            Log.d("***", intent.getStringExtra(SipManager.EXTRA_CALL_ID) + " " + intent.getStringExtra(SipManager.EXTRA_OFFER_SD)   );
+            startActivityIntent.putExtra(SipManager.EXTRA_OFFER_SD, intent.getStringExtra(SipManager.EXTRA_OFFER_SD));
+            startActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(startActivityIntent);
+//        }
+
+
     }
 }

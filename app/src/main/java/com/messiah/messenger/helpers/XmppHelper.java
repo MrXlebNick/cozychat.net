@@ -1,6 +1,5 @@
 package com.messiah.messenger.helpers;
 
-import android.content.Context;
 import android.content.Intent;
 import android.support.v4.content.LocalBroadcastManager;
 import android.text.TextUtils;
@@ -8,6 +7,7 @@ import android.util.Log;
 
 import com.google.gson.Gson;
 import com.messiah.messenger.Constants;
+import com.messiah.messenger.CozyChatApplication;
 import com.messiah.messenger.fragment.MessageFragment;
 import com.messiah.messenger.model.Message;
 import com.messiah.messenger.model.User;
@@ -25,7 +25,6 @@ import org.jivesoftware.smack.chat.Chat;
 import org.jivesoftware.smack.chat.ChatManager;
 import org.jivesoftware.smack.chat.ChatManagerListener;
 import org.jivesoftware.smack.chat.ChatMessageListener;
-import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.sasl.SASLErrorException;
 import org.jivesoftware.smack.sasl.SASLMechanism;
 import org.jivesoftware.smack.sasl.provided.SASLDigestMD5Mechanism;
@@ -34,7 +33,6 @@ import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 import org.jivesoftware.smackx.iqregister.AccountManager;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptManager;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
-import org.jivesoftware.smackx.receipts.ReceiptReceivedListener;
 import org.jivesoftware.smackx.search.ReportedData;
 import org.jivesoftware.smackx.search.UserSearch;
 import org.jivesoftware.smackx.search.UserSearchManager;
@@ -48,6 +46,7 @@ import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Observable;
 import java.util.regex.Pattern;
 
@@ -59,23 +58,24 @@ import static com.messiah.messenger.Constants.MESSAGE_FILE_INDEX_PREFIX;
  * Created by XlebNick for CMessenger.
  */
 
-public class ServerHelper extends Observable implements ChatMessageListener {
-
+public class XmppHelper extends Observable implements ChatMessageListener {
 
     public static final String MESSAGE_RECEIVED = "cozychat.net.MESSAGE_RECEIVED";
     public static final String FROM_EXTRA = "cozychat.net.FROM_EXTRA";
     public static final String TIME_EXTRA = "cozychat.net.DATE_EXTRA";
     public static final String MESSAGE_EXTRA = "cozychat.net.MESSAGE_EXTRA";
-    private static final String SERVICE_NAME = "ec2-35-165-67-249.us-west-2.compute.amazonaws.com";
-    private static ServerHelper mInstance;
+    private static final String SERVICE_NAME = "ec2-35-162-177-84.us-west-2.compute.amazonaws.com";
+    private static XmppHelper mInstance;
+    private io.reactivex.Observable<XMPPConnection> connectionObservable;
     private String mLogin;
     private AbstractXMPPConnection mConnection;
-    private Context mContext;
     private int loginTrials = 0;
 
     private int getUsersTrials = 0;
 
     private ChatManagerListener chatListener;
+
+    private ArrayList<Runnable> tasksOnLogin = new ArrayList<>();
 //    private FileTransferManager transferManager;
 
 //    private FileListener fileListener;
@@ -83,97 +83,163 @@ public class ServerHelper extends Observable implements ChatMessageListener {
 //    private List<FileTransfer> fileTransfers = new ArrayList<>();
 //    private boolean isFileDownloading;
 
-    private ServerHelper(String login) {
+    private XmppHelper(String login) {
         mLogin = login;
-        initConnection(login);
+        init();
 //        fileListener = new FileListener();
     }
 
-    public static ServerHelper getInstance(Context context) {
-        return getInstance(context, null);
+    public static XmppHelper getInstance() {
+        return getInstance(null);
     }
 
-    public static ServerHelper getInstance(Context context, String login) {
+    public static XmppHelper getInstance(String login) {
         if (mInstance == null) {
-            String savedLogin = Utils.getPhoneNumber(context);
+
+            if (CozyChatApplication.getContext() == null) { throw new NullPointerException(); }
+
+            String savedLogin = Utils.getPhoneNumber(CozyChatApplication.getContext());
             if (savedLogin == null) {
                 if (login == null) {
-                    throw new NullPointerException("No saved login was found and argument login is null");
+//                    throw new NullPointerException(
+//                            "No saved login was found and argument login is null");
                 }
-                mInstance = new ServerHelper(login);
+                mInstance = new XmppHelper(login);
             } else {
-                mInstance = new ServerHelper(savedLogin);
+                mInstance = new XmppHelper(savedLogin);
             }
         }
-
-        mInstance.mContext = context;
         return mInstance;
     }
 
-    public void initConnection(final String login) {
+    private void init() {
+        Log.d("xmpp", "init");
+        XMPPTCPConnectionConfiguration config = XMPPTCPConnectionConfiguration.builder()
+                .setUsernameAndPassword(mLogin, mLogin)
+                .setServiceName(SERVICE_NAME)
+                .setHost(SERVICE_NAME)
+                .setConnectTimeout(10000)
+                .setPort(5222)
+                .setDebuggerEnabled(true)
+                .setSecurityMode(ConnectionConfiguration.SecurityMode.disabled)
+                .build();
+
+        SmackConfiguration.DEBUG = true;
+
+        SASLMechanism mechanism = new SASLDigestMD5Mechanism();
+        SASLAuthentication.registerSASLMechanism(mechanism);
+        SASLAuthentication.blacklistSASLMechanism("SCRAM-SHA-1");
+        SASLAuthentication.blacklistSASLMechanism("DIGEST-MD5");
+        SASLAuthentication.unBlacklistSASLMechanism("PLAIN");
+        mConnection = new XMPPTCPConnection(config);
+        DeliveryReceiptManager.getInstanceFor(mConnection).autoAddDeliveryReceiptRequests();
+
+        mConnection.addConnectionListener(new ConnectionListener() {
+
+            @Override
+            public void connected(XMPPConnection connection) {
+                Log.i("xmpp", "connected.");
+            }
+
+            @Override
+            public void authenticated(XMPPConnection connection, boolean resumed) {
+                Log.i("xmpp", "authenticated.");
+            }
+
+            @Override
+            public void connectionClosed() {
+                Log.i("xmpp", "XMPP connection was closed.");
+                init();
+            }
+
+            @Override
+            public void connectionClosedOnError(Exception arg0) {
+                Log.i("xmpp", "Connection to XMPP server was lost.");
+                init();
+            }
+
+            @Override
+            public void reconnectionSuccessful() {
+                Log.i("xmpp", "Successfully reconnected to the XMPP server.");
+
+            }
+
+            @Override
+            public void reconnectingIn(int seconds) {
+                Log.i("xmpp", "Reconnecting in " + seconds + " seconds.");
+            }
+
+            @Override
+            public void reconnectionFailed(Exception arg0) {
+                Log.i("xmpp", "Failed to reconnect to the XMPP server.");
+            }
+        });
+
+    }
+
+    public io.reactivex.Observable<XMPPConnection> connectrx(){
         if (mConnection == null) {
-            XMPPTCPConnectionConfiguration config = XMPPTCPConnectionConfiguration.builder()
-                    .setUsernameAndPassword(login, login)
-                    .setServiceName(SERVICE_NAME)
-                    .setHost(SERVICE_NAME)
-                    .setConnectTimeout(10000)
-                    .setPort(5222)
-                    .setDebuggerEnabled(true)
-                    .setSecurityMode(ConnectionConfiguration.SecurityMode.disabled)
-                    .build();
+            init();
+        }
+        if (mConnection.isConnected())
+            return io.reactivex.Observable.just(mConnection);
 
-            SmackConfiguration.DEBUG = true;
+        Log.d("xmpp", "connect");
 
-            SASLMechanism mechanism = new SASLDigestMD5Mechanism();
-            SASLAuthentication.registerSASLMechanism(mechanism);
-            SASLAuthentication.blacklistSASLMechanism("SCRAM-SHA-1");
-            SASLAuthentication.blacklistSASLMechanism("DIGEST-MD5");
-            SASLAuthentication.unBlacklistSASLMechanism("PLAIN");
-            mConnection = new XMPPTCPConnection(config);
-            DeliveryReceiptManager.getInstanceFor(mConnection).autoAddDeliveryReceiptRequests();
-
-            mConnection.addConnectionListener(new ConnectionListener() {
-
+        return io.reactivex.Observable.create(emitter -> {
+            ConnectionListener listener = new ConnectionListener() {
                 @Override
                 public void connected(XMPPConnection connection) {
-                    Log.i("***", "connected.");
+                    emitter.onNext(connection);
+                    connection.removeConnectionListener(this);
                 }
 
                 @Override
                 public void authenticated(XMPPConnection connection, boolean resumed) {
-                    Log.i("***", "authenticated.");
+
                 }
 
                 @Override
                 public void connectionClosed() {
-                    Log.i("***", "XMPP connection was closed.");
-                    initConnection(login);
+
                 }
 
                 @Override
-                public void connectionClosedOnError(Exception arg0) {
-                    Log.i("***", "Connection to XMPP server was lost.");
-                    initConnection(login);
+                public void connectionClosedOnError(Exception e) {
+                    emitter.onError(e);
+                    mConnection.removeConnectionListener(this);
                 }
 
                 @Override
                 public void reconnectionSuccessful() {
-                    Log.i("***", "Successfully reconnected to the XMPP server.");
 
                 }
 
                 @Override
                 public void reconnectingIn(int seconds) {
-                    Log.i("***", "Reconnecting in " + seconds + " seconds.");
+
                 }
 
                 @Override
-                public void reconnectionFailed(Exception arg0) {
-                    Log.i("***", "Failed to reconnect to the XMPP server.");
-                }
-            });
-        }
+                public void reconnectionFailed(Exception e) {
 
+                }
+            };
+            mConnection.addConnectionListener(listener);
+            try{
+                mConnection.connect();
+            } catch (Exception e){
+                emitter.onError(e);
+            }
+        });
+    }
+
+
+    public void connect() {
+
+        if (mConnection == null) {
+            init();
+        }
 
         try {
             loginOrRegister();
@@ -181,27 +247,23 @@ public class ServerHelper extends Observable implements ChatMessageListener {
             e.printStackTrace();
         }
         setMessageListener();
-        DeliveryReceiptManager.getInstanceFor(mConnection).addReceiptReceivedListener(new ReceiptReceivedListener() {
-            @Override
-            public void onReceiptReceived(String fromJid, String toJid, String deliveryReceiptId, Stanza stanza) {
-                Log.d("***", "onReceiptReceived: from: " + fromJid + " to: " + toJid + " deliveryReceiptId: " + deliveryReceiptId + " stanza: " + stanza);
-            }
-
-        });
-
-
+        DeliveryReceiptManager.getInstanceFor(mConnection)
+                .addReceiptReceivedListener((fromJid, toJid, deliveryReceiptId, stanza) -> Log.d(
+                        "***",
+                        "onReceiptReceived: from: " + fromJid + " to: " + toJid +
+                                " deliveryReceiptId: " + deliveryReceiptId + " stanza: " + stanza));
     }
+
+
 
     public void loginOrRegister() throws IOException, XMPPException, SmackException {
         try {
-            if (!mConnection.isConnected())
-                mConnection.connect();
+            if (! mConnection.isConnected()) { mConnection.connect(); }
             loginTrials = 0;
         } catch (SASLErrorException e) {
 
 
             e.printStackTrace();
-
             AccountManager accountManager = AccountManager.getInstance(mConnection);
             try {
                 accountManager.sensitiveOperationOverInsecureConnection(true);
@@ -218,15 +280,16 @@ public class ServerHelper extends Observable implements ChatMessageListener {
 
         try {
 
-            if (!mConnection.isAuthenticated()) {
+            if (! mConnection.isAuthenticated()) {
 
                 mConnection.login(mLogin, mLogin, null);
                 Log.d("***", "login as good boys do");
             }
             loginTrials = 0;
         } catch (SASLErrorException e) {
-            e.printStackTrace();
 
+            Log.d("***", "login asl");
+            e.printStackTrace();
             AccountManager accountManager = AccountManager.getInstance(mConnection);
             try {
                 accountManager.sensitiveOperationOverInsecureConnection(true);
@@ -234,49 +297,67 @@ public class ServerHelper extends Observable implements ChatMessageListener {
                 loginOrRegister();
             } catch (XMPPException | IOException | SmackException e1) {
                 e1.printStackTrace();
-                throw e1;
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
 
+        getUserProperties(mLogin);
+
+    }
+    
+    public io.reactivex.Observable<HashMap<String, String>> getUserPropertiesrx(){
+        return getUserPropertiesrx(mLogin);
+    }
+    
+    public io.reactivex.Observable<HashMap<String, String>> getUserPropertiesrx(String phoneNumber){
+
+        return getSignedInObservable().map(emitter -> {
+            VCardManager vCardManager = VCardManager.getInstanceFor(mConnection);
+            VCard vCard = vCardManager.loadVCard(phoneNumber + "@" + SERVICE_NAME);
+            HashMap<String, String> properties = new HashMap<>();
+
+            properties.put("username", vCard.getNickName());
+            properties.put("phone", phoneNumber);
+            properties.put("email", vCard.getEmailHome());
+
+            String sipNumber = vCard.getField("sip");
+            properties.put("sip", sipNumber);
+            Log.d("***",
+                    phoneNumber + " " + Utils.getPhoneNumber(CozyChatApplication.getContext()) + " " +
+                            sipNumber);
+//            if (phoneNumber.equals(Utils.getPhoneNumber(CozyChatApplication.getContext())) &&
+//                    ! TextUtils.isEmpty(sipNumber)) {
+//                vCard.setField("sip", "6011");
+//                vCard.save(mConnection);
+//                Utils.putSipNumber(CozyChatApplication.getContext(), sipNumber);
+//                SipHelper.getInstance().register();
+//            }
+            return properties;
+        });
+    }
+
+    private io.reactivex.Observable<XMPPConnection> getSignedInObservable() {
+        if (mConnection == null)
+            init();
+        io.reactivex.Observable<XMPPConnection> observable = io.reactivex.Observable.just(mConnection);
+        if (!mConnection.isConnected())
+            observable = observable.flatMap(o -> connectrx());
+        if (!mConnection.isAuthenticated())
+            observable = observable.flatMap(o -> loginrx());
+        return observable;
     }
 
     public HashMap<String, String> getUserProperties() throws SmackException.NotConnectedException,
             XMPPException.XMPPErrorException, SmackException.NoResponseException {
-
-        if (!mConnection.isConnected()) {
-            try {
-                loginOrRegister();
-            } catch (SmackException e) {
-                e.printStackTrace();
-                if (e instanceof SmackException.ConnectionException) {
-                    loginTrials = 0;
-                    Toaster.toast("Network error, try later");
-                    return null;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                Toaster.toast("An error occured: " + e.getMessage());
-            }
-        }
-        VCard vCard = VCardManager.getInstanceFor(mConnection).loadVCard();
-        HashMap<String, String> properties = new HashMap<>();
-
-        properties.put("username", vCard.getNickName());
-        properties.put("phone", mLogin);
-        properties.put("email", vCard.getEmailHome());
-        properties.put("sip", vCard.getField("sip"));
-        return properties;
-
-
+        return getUserProperties(mLogin);
     }
 
     public void setUserProperties(HashMap<String, String> properties)
             throws SmackException.NotConnectedException,
             XMPPException.XMPPErrorException,
             SmackException.NoResponseException {
-        if (!mConnection.isConnected()) {
+        if (! mConnection.isConnected()) {
             try {
                 loginOrRegister();
             } catch (SmackException e) {
@@ -293,13 +374,66 @@ public class ServerHelper extends Observable implements ChatMessageListener {
         }
 
         VCard vCard = new VCard();
+
         vCard.setNickName(properties.get("username"));
         vCard.setEmailHome(properties.get("email"));
         VCardManager.getInstanceFor(mConnection).saveVCard(vCard);
     }
 
+    public HashMap<String, String> getUserProperties(String phoneNumber)
+            throws SmackException.NotConnectedException,
+            XMPPException.XMPPErrorException, SmackException.NoResponseException {
+
+        if (! mConnection.isConnected() || ! mConnection.isAuthenticated()) {
+            try {
+                loginOrRegister();
+                tasksOnLogin.add(() -> {
+                    try {
+                        getUserProperties(phoneNumber);
+                    } catch (SmackException.NotConnectedException | XMPPException.XMPPErrorException | SmackException.NoResponseException e) {
+                        e.printStackTrace();
+                    }
+                });
+            } catch (SmackException e) {
+                e.printStackTrace();
+                if (e instanceof SmackException.ConnectionException) {
+                    loginTrials = 0;
+                    Toaster.toast("Network error, try later");
+                    return null;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                Toaster.toast("An error occured: " + e.getMessage());
+            }
+        }
+
+
+        Log.d("sipka", phoneNumber + "@" + SERVICE_NAME);
+        VCardManager vCardManager = VCardManager.getInstanceFor(mConnection);
+        VCard vCard = vCardManager.loadVCard(phoneNumber + "@" + SERVICE_NAME);
+        HashMap<String, String> properties = new HashMap<>();
+
+        properties.put("username", vCard.getNickName());
+        properties.put("phone", phoneNumber);
+        properties.put("email", vCard.getEmailHome());
+
+        String sipNumber = vCard.getField("sip");
+        properties.put("sip", sipNumber);
+        Log.d("***",
+                phoneNumber + " " + Utils.getPhoneNumber(CozyChatApplication.getContext()) + " " +
+                        sipNumber);
+        if (phoneNumber.equals(Utils.getPhoneNumber(CozyChatApplication.getContext())) &&
+                ! TextUtils.isEmpty(sipNumber)) {
+            vCard.setField("sip", "6011");
+            vCard.save(mConnection);
+            Utils.putSipNumber(CozyChatApplication.getContext(), sipNumber);
+            SipHelper.getInstance().register();
+        }
+        return properties;
+    }
+
     public List<User> getAllUsers() {
-        if (!mConnection.isConnected()) {
+        if (! mConnection.isConnected()) {
             try {
                 loginOrRegister();
             } catch (SmackException e) {
@@ -326,17 +460,27 @@ public class ServerHelper extends Observable implements ChatMessageListener {
             answerForm.setAnswer("Username", true);
             answerForm.setAnswer("search", "*");
 
-            ReportedData results = userSearch.sendSearchForm(mConnection, answerForm, searchFormString);
+            ReportedData results =
+                    userSearch.sendSearchForm(mConnection, answerForm, searchFormString);
             if (results != null) {
                 List<User> users = new ArrayList<>();
                 List<ReportedData.Row> rows = results.getRows();
                 for (ReportedData.Row row : rows) {
                     User user = new User();
-                    user.mPhoneNumber = row.getValues("Username").toString().replaceAll("[\\[\\]]", "");
-                    if (row.getValues("Name") != null)
-                        user.mFullName = row.getValues("Name").toString().replaceAll("[\\[\\]]", "");
-                    if (row.getValues("Email") != null)
-                        user.mSipNumber = row.getValues("Email").toString().replaceAll("[\\[\\]]", "");
+                    user.mPhoneNumber =
+                            row.getValues("Username").toString().replaceAll("[\\[\\]]", "");
+                    if (row.getValues("Name") != null) {
+                        user.mFullName =
+                                row.getValues("Name").toString().replaceAll("[\\[\\]]", "");
+                    }
+                    if (row.getValues("Email") != null) {
+                        user.mSipNumber =
+                                row.getValues("Email").toString().replaceAll("[\\[\\]]", "");
+                    }
+                    if (row.getValues("sip") != null) {
+                        user.mSipNumber =
+                                row.getValues("sip").toString().replaceAll("[\\[\\]]", "");
+                    }
                     users.add(user);
                 }
 
@@ -370,15 +514,13 @@ public class ServerHelper extends Observable implements ChatMessageListener {
     public void setMessageListener() {
 
         ChatManager chatManager = ChatManager.getInstanceFor(mConnection);
-        Log.d("shit", "setMessageListener " + mConnection.toString() + " " + chatManager.toString());
+        Log.d("shit",
+                "setMessageListener " + mConnection.toString() + " " + chatManager.toString());
 //        setReceiveFileListener();
         if (chatListener == null) {
-            chatListener = new ChatManagerListener() {
-                @Override
-                public void chatCreated(Chat chat, boolean createdLocally) {
-                    Log.d("shit", "chatCreated");
-                    chat.addMessageListener(ServerHelper.this);
-                }
+            chatListener = (chat, createdLocally) -> {
+                Log.d("shit", "chatCreated");
+                chat.addMessageListener(XmppHelper.this);
             };
         }
         try {
@@ -391,7 +533,7 @@ public class ServerHelper extends Observable implements ChatMessageListener {
     }
 
     public void sendMessage(String mPhoneNumber, String messageString) {
-        if (!mConnection.isConnected()) {
+        if (! mConnection.isConnected()) {
             try {
                 loginOrRegister();
             } catch (SmackException e) {
@@ -418,10 +560,9 @@ public class ServerHelper extends Observable implements ChatMessageListener {
 
             String deliveryReceiptId = DeliveryReceiptRequest.addTo(message);
 
-
             chat.sendMessage(message);
             Message messageForDb = new Message();
-            messageForDb.sender = Utils.getPhoneNumber(mContext);
+            messageForDb.sender = Utils.getPhoneNumber(CozyChatApplication.getContext());
             messageForDb.receiver = mPhoneNumber;
             messageForDb.body = messageString;
             messageForDb.time = System.currentTimeMillis();
@@ -455,7 +596,7 @@ public class ServerHelper extends Observable implements ChatMessageListener {
     }
 
     public void sendMessage(Message localMessage) {
-        if (!mConnection.isConnected()) {
+        if (! mConnection.isConnected()) {
             try {
                 loginOrRegister();
             } catch (SmackException e) {
@@ -631,23 +772,23 @@ public class ServerHelper extends Observable implements ChatMessageListener {
         messageForDb.isFromMe = false;
         messageForDb.time = System.currentTimeMillis();
         messageForDb.messageId = message.getStanzaId();
-        messageForDb.receiver = Utils.getPhoneNumber(mContext);
+        messageForDb.receiver = Utils.getPhoneNumber(CozyChatApplication.getContext());
 
         Log.d("***", messageForDb.body + " " + messageForDb.sender + " " + message.getStanzaId());
-        if (!TextUtils.isEmpty(messageForDb.body)) {
+        if (! TextUtils.isEmpty(messageForDb.body)) {
             messageForDb.save();
-            if (!MessageFragment.isActive) {
-                Utils.sendNotification(mContext);
+            if (! MessageFragment.isActive) {
+                Utils.sendNotification(CozyChatApplication.getContext());
             }
             setChanged();
             notifyObservers();
         }
 
-        LocalBroadcastManager broadcaster = LocalBroadcastManager.getInstance(mContext);
+        LocalBroadcastManager broadcaster =
+                LocalBroadcastManager.getInstance(CozyChatApplication.getContext());
 
         Intent intent = new Intent(MESSAGE_RECEIVED);
-        if (message != null)
-            intent.putExtra(MESSAGE_EXTRA, messageForDb.body);
+        if (message != null) { intent.putExtra(MESSAGE_EXTRA, messageForDb.body); }
         intent.putExtra(FROM_EXTRA, messageForDb.receiver);
         intent.putExtra(TIME_EXTRA, messageForDb.time);
         broadcaster.sendBroadcast(intent);
@@ -655,7 +796,7 @@ public class ServerHelper extends Observable implements ChatMessageListener {
     }
 
     public void sendFileMessage(Message mItem, String messageString) {
-        if (!mConnection.isConnected()) {
+        if (! mConnection.isConnected()) {
             try {
                 loginOrRegister();
             } catch (SmackException e) {
@@ -693,6 +834,74 @@ public class ServerHelper extends Observable implements ChatMessageListener {
             e.printStackTrace();
             Toaster.toast("Error while sending message: " + e.getMessage());
         }
+    }
+
+    public void createUser(String login, String email, String password)
+            throws SmackException.NotConnectedException, XMPPException.XMPPErrorException, SmackException.NoResponseException {
+        Log.d("xmpp", "create user");
+        AccountManager accountManager = AccountManager.getInstance(mConnection);
+        accountManager.sensitiveOperationOverInsecureConnection(true);
+
+        Map<String, String> attributes = new HashMap<>();
+        attributes.put("email", email);
+        accountManager.createAccount(login, password, attributes);
+    }
+
+    public io.reactivex.Observable<XMPPConnection> loginrx(String mLogin, String mPassword){
+        if (mConnection == null) {
+            init();
+        }
+
+        return io.reactivex.Observable.create(emitter -> {
+            ConnectionListener listener = new ConnectionListener() {
+                @Override
+                public void connected(XMPPConnection connection) {
+                }
+
+                @Override
+                public void authenticated(XMPPConnection connection, boolean resumed) {
+
+                    emitter.onNext(connection);
+                    connection.removeConnectionListener(this);
+                }
+
+                @Override
+                public void connectionClosed() {
+
+                }
+
+                @Override
+                public void connectionClosedOnError(Exception e) {
+                    emitter.onError(e);
+                    mConnection.removeConnectionListener(this);
+                }
+
+                @Override
+                public void reconnectionSuccessful() {
+
+                }
+
+                @Override
+                public void reconnectingIn(int seconds) {
+
+                }
+
+                @Override
+                public void reconnectionFailed(Exception e) {
+
+                }
+            };
+            mConnection.addConnectionListener(listener);
+            try {
+                mConnection.login(mLogin, mPassword, null);
+            } catch (Exception e){
+                emitter.onError(e);
+            }
+        });
+    }
+
+    public io.reactivex.Observable<XMPPConnection> loginrx() {
+        return loginrx("", "");
     }
 
 //    public FileTransfer getIncomingFileTrnsfer(String messageId) {

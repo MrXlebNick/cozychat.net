@@ -46,6 +46,8 @@ public class Utils {
     private static final String SPREFS_FIELD_GCM_TOKEN = "gcm_token";
     private static final String SPREFS_FIELD_IS_FIRST_TIME = "is_first_time";
 
+    private static int notificationCounter = 0;
+
     public static void putPhoneNumber(Context context, String phoneNumber) {
 
         SharedPreferences sharedPreferences = context.getSharedPreferences(DB_NAME, Context.MODE_PRIVATE);
@@ -141,8 +143,12 @@ public class Utils {
         NotificationManager mNotificationManager =
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 
-        mNotificationManager.notify(1288, mBuilder.build());
+        mNotificationManager.notify(notificationCounter++, mBuilder.build());
 
+    }
+
+    public static int getNotificationCounter() {
+        return notificationCounter;
     }
 
     public static void dismissNotifications(Context context) {
@@ -166,7 +172,9 @@ public class Utils {
 
 
     public static String getSipNumber(Context context) {
-        return context.getSharedPreferences(DB_NAME, Context.MODE_PRIVATE).getString(SPREFS_FIELD_SIP, "6002");
+        context.getSharedPreferences(DB_NAME, Context.MODE_PRIVATE);
+        Log.d("***", "text is " + context.getSharedPreferences(DB_NAME, Context.MODE_PRIVATE).getString(SPREFS_FIELD_SIP, null));
+        return context.getSharedPreferences(DB_NAME, Context.MODE_PRIVATE).getString(SPREFS_FIELD_SIP, null);
     }
 
 

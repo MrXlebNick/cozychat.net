@@ -16,7 +16,7 @@ import java.util.List;
 public class Dialog {
     public int count = 0;
     public String message;
-    public User oppponent;
+    public User peer;
     public boolean isFromMe;
     public Context context;
 
@@ -24,24 +24,23 @@ public class Dialog {
     public Dialog(Context context, String opponent) {
         this.context = context;
 
-        List<User> users = User.find(User.class, "m_phone_number = ?", opponent);
+        List<User> users = User.find(User.class, "m_phone_number = ? OR m_sip_number = ?", opponent, opponent);
         if (users == null || users.size() == 0) {
             User user = new User();
             user.mPhoneNumber = opponent;
             user.mFullName = "Secret Spy";
             user.mSipNumber = "0000";
-            oppponent = user;
+            peer = user;
         } else {
-            oppponent = users.get(0);
-
+            peer = users.get(0);
         }
-        Log.d("***", new Gson().toJson(oppponent));
+        Log.d("***", new Gson().toJson(peer));
     }
 
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof Dialog) {
-            return ((Dialog) obj).oppponent == oppponent;
+            return ((Dialog) obj).peer == peer;
         }
         return super.equals(obj);
     }

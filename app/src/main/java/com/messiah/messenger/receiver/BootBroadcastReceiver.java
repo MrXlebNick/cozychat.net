@@ -3,7 +3,6 @@ package com.messiah.messenger.receiver;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 
 import com.messiah.messenger.service.ListenForMessagesService;
 

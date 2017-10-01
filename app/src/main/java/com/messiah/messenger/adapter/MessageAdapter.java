@@ -1,10 +1,14 @@
 package com.messiah.messenger.adapter;
 
+import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.AppCompatImageView;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
@@ -22,7 +26,7 @@ import com.google.gson.Gson;
 import com.messiah.messenger.Constants;
 import com.messiah.messenger.R;
 import com.messiah.messenger.helpers.DocumentHelper;
-import com.messiah.messenger.helpers.ServerHelper;
+import com.messiah.messenger.helpers.XmppHelper;
 import com.messiah.messenger.model.Message;
 import com.messiah.messenger.utils.FileIOApi;
 import com.messiah.messenger.utils.FileResponse;
@@ -58,10 +62,10 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
     private FileIOApi retrofit;
 
     public MessageAdapter(Context context) {
-//        ServerHelper.getInstance(context).setFileListener(this);
-        ServerHelper.getInstance(context).addObserver(this);
+//        XmppHelper.getInstance(context).setFileListener(this);
+        XmppHelper.getInstance().addObserver(this);
         mContext = context;
-        retrofit = new Retrofit.Builder().baseUrl("http://ec2-35-165-67-249.us-west-2.compute.amazonaws.com:8080")
+        retrofit = new Retrofit.Builder().baseUrl("http://ec2-35-162-177-84.us-west-2.compute.amazonaws.com:8080")
                 .addConverterFactory(GsonConverterFactory.create())
                 .build().create(FileIOApi.class);
     }
@@ -171,7 +175,7 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
         viewHolder.mDateView.setText(sdf.format(new Date(viewHolder.mItem.time)));
 
 
-        if (getItemViewType(position) == TYPE_FILE){
+        if (getItemViewType(position) == TYPE_FILE && viewHolder instanceof FileViewHolder){
             if (viewHolder.mItem.fileStatus.equals(Message.FILE_STATUS_LOADED)){
 
                 ((FileViewHolder) viewHolder).mBytesView.setVisibility(View.VISIBLE);
@@ -360,7 +364,7 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
                             if (response.isSuccessful()){
                                 Log.d("***", "success");
                                 setStatus(Message.FILE_STATUS_LOADED);
-                                ServerHelper.getInstance(mContext).sendFileMessage(mItem, response.body().key +
+                                XmppHelper.getInstance().sendFileMessage(mItem, response.body().key +
                                         Constants.MESSAGE_FILE_INDEX_PREFIX + mItem.fileName);
                                 return;
                             }
@@ -392,9 +396,15 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
                             MediaType.parse(MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)),
                             file);
                 } catch (Exception e){
-                    requestFile = RequestBody.create(
-                            MediaType.parse(mContext.getContentResolver().getType(Uri.parse(mItem.fileUri))),
-                            file);
+                    e.printStackTrace();
+                    String mediaTypeString = mContext.getContentResolver().getType(Uri.parse(mItem.fileUri));
+                    if (mediaTypeString == null || mediaTypeString.isEmpty()){
+                        requestFile = RequestBody.create(null, file);
+                    } else {
+                        requestFile = RequestBody.create(
+                                MediaType.parse(mContext.getContentResolver().getType(Uri.parse(mItem.fileUri))),
+                                file);
+                    }
 
                 }
 
@@ -411,6 +421,9 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
                             new AsyncTask<Void, Void, Boolean>() {
                                 @Override
                                 protected Boolean doInBackground(Void... voids) {
+                                    Log.d("permission", "isGranted" + ContextCompat.checkSelfPermission(mContext,
+                                            Manifest.permission.WRITE_EXTERNAL_STORAGE));
+                                    ActivityCompat.requestPermissions((Activity) mContext, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
                                     return DocumentHelper.writeResponseBodyToDisk(mItem, response.body(), mItem.fileName);
                                 }
 

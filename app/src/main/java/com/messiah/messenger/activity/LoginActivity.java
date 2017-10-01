@@ -1,25 +1,8 @@
 package com.messiah.messenger.activity;
 
-import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.text.TextUtils;
 import android.view.View;
-import android.widget.Toast;
-
-import com.digits.sdk.android.AuthCallback;
-import com.digits.sdk.android.Digits;
-import com.digits.sdk.android.DigitsAuthButton;
-import com.digits.sdk.android.DigitsException;
-import com.digits.sdk.android.DigitsSession;
-import com.messiah.messenger.R;
-import com.messiah.messenger.model.User;
-import com.messiah.messenger.utils.Utils;
-import com.twitter.sdk.android.core.TwitterAuthConfig;
-import com.twitter.sdk.android.core.TwitterCore;
-
-import io.fabric.sdk.android.Fabric;
 
 /**
  * A login screen that offers login via email/password.
@@ -35,61 +18,61 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        TwitterAuthConfig authConfig = new TwitterAuthConfig(TWITTER_KEY, TWITTER_SECRET);
-        Fabric.with(this, new TwitterCore(authConfig), new Digits.Builder().build());
-        setContentView(R.layout.activity_login);
-
-        User.findById(User.class, 1);
-        User.findById(User.class, 1);
+//        TwitterAuthConfig authConfig = new TwitterAuthConfig(TWITTER_KEY, TWITTER_SECRET);
+//        Fabric.with(this, new TwitterCore(authConfig), new Digits.Builder().build());
+//        setContentView(R.layout.activity_login);
 //
-//        Utils.putPhoneNumber(this, "+77772427761");
-        // Set up the login form.
-        String phoneNumber = Utils.getPhoneNumber(getApplicationContext());
-        if (!TextUtils.isEmpty(phoneNumber)) {
-            Toast.makeText(getApplicationContext(), "Authentication successful for "
-                    + phoneNumber, Toast.LENGTH_LONG).show();
-            Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            getApplicationContext().startActivity(intent);
-            return;
-        }
-
-        mProgressView = findViewById(R.id.login_progress);
-
-        DigitsAuthButton digitsButton = (DigitsAuthButton) findViewById(R.id.auth_button);
-        digitsButton.setCallback(new AuthCallback() {
-            @Override
-            public void success(DigitsSession session, String phoneNumber) {
-                Utils.putPhoneNumber(getApplicationContext(), phoneNumber);
-
-                Toast.makeText(getApplicationContext(), "Authentication successful for "
-                        + phoneNumber, Toast.LENGTH_LONG).show();
-                Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                getApplicationContext().startActivity(intent);
-
-            }
-
-            @Override
-            public void failure(DigitsException exception) {
-                Toast.makeText(LoginActivity.this, "Sign in with Digits failure", Toast.LENGTH_SHORT).show();
-
-                String phoneNumber = "+77772427761";
-                Utils.putPhoneNumber(getApplicationContext(), phoneNumber);
-
-                Toast.makeText(getApplicationContext(), "Authentication successful for "
-                        + phoneNumber, Toast.LENGTH_LONG).show();
-                Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                getApplicationContext().startActivity(intent);
-            }
-        });
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
-            digitsButton.callOnClick();
-        }
+//        User.findById(User.class, 1);
+//        User.findById(User.class, 1);
+////
+////        Utils.putPhoneNumber(this, "+79058109338");
+//        // Set up the login form.
+//        String phoneNumber = Utils.getPhoneNumber(getApplicationContext());
+//        if (!TextUtils.isEmpty(phoneNumber)) {
+//            Toast.makeText(getApplicationContext(), "Authentication successful for "
+//                    + phoneNumber, Toast.LENGTH_LONG).show();
+//            Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+//            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+//            getApplicationContext().startActivity(intent);
+//            return;
+//        }
+//
+//        mProgressView = findViewById(R.id.login_progress);
+//
+//        DigitsAuthButton digitsButton = (DigitsAuthButton) findViewById(R.id.auth_button);
+//        digitsButton.setCallback(new AuthCallback() {
+//            @Override
+//            public void success(DigitsSession session, String phoneNumber) {
+//                Utils.putPhoneNumber(getApplicationContext(), phoneNumber);
+//
+//                Toast.makeText(getApplicationContext(), "Authentication successful for "
+//                        + phoneNumber, Toast.LENGTH_LONG).show();
+//                Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+//                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+//                getApplicationContext().startActivity(intent);
+//
+//            }
+//
+//            @Override
+//            public void failure(DigitsException exception) {
+//                Toast.makeText(LoginActivity.this, "Sign in with Digits failure", Toast.LENGTH_SHORT).show();
+//
+////                String phoneNumber = "+77772427761";
+////                Utils.putPhoneNumber(getApplicationContext(), phoneNumber);
+////
+////                Toast.makeText(getApplicationContext(), "Authentication successful for "
+////                        + phoneNumber, Toast.LENGTH_LONG).show();
+////                Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+////                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+////                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+////                getApplicationContext().startActivity(intent);
+//            }
+//        });
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
+//            digitsButton.callOnClick();
+//        }
 
 
     }

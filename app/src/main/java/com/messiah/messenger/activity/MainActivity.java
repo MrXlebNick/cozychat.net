@@ -1,13 +1,19 @@
 package com.messiah.messenger.activity;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.net.sip.SipManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.design.widget.NavigationView;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -19,25 +25,36 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.gcm.GoogleCloudMessaging;
 import com.messiah.messenger.R;
-import com.messiah.messenger.helpers.SipHelper;
 import com.messiah.messenger.fragment.DialogListFragment;
 import com.messiah.messenger.fragment.MessageFragment;
 import com.messiah.messenger.fragment.ProfileInfoFragment;
 import com.messiah.messenger.fragment.UserListFragment;
+import com.messiah.messenger.helpers.SipHelper;
 import com.messiah.messenger.model.User;
 import com.messiah.messenger.service.ListenForMessagesService;
+import com.messiah.messenger.service.PjsipService;
 import com.messiah.messenger.service.RegistrationIntentService;
 import com.messiah.messenger.utils.Utils;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 import io.github.rockerhieu.emojicon.EmojiconGridFragment;
 import io.github.rockerhieu.emojicon.EmojiconsFragment;
 import io.github.rockerhieu.emojicon.emoji.Emojicon;
 import io.github.rockerhieu.emojiconize.Emojiconize;
+import xdroid.toaster.Toaster;
 
 
 public class MainActivity extends AppCompatActivity
@@ -64,13 +81,21 @@ public class MainActivity extends AppCompatActivity
             finish();
         }
 
-        SipHelper.getInstance().register();
+        startService(new Intent(this, PjsipService.class));
+
         Log.d("***", SipManager.isVoipSupported(this)  + " " + SipManager.isApiSupported(this));
+        if (!SipManager.isVoipSupported(this)  || !SipManager.isApiSupported(this)){
+            Toaster.toast("SIP protocol is not supported on the device; calls are unavailable");
+        }
+        SipHelper.getInstance().register();
         setContentView(R.layout.activity_template);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setTitle(R.string.app_name);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
+
+
+
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -87,7 +112,7 @@ public class MainActivity extends AppCompatActivity
 
         FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
 
-        fragmentTransaction.replace(R.id.fragmnet_container, Utils.isFirstTime(this) ? new UserListFragment() : new DialogListFragment());
+        fragmentTransaction.replace(R.id.fragmnet_container, new DialogListFragment());
         fragmentTransaction.commit();
 
         ((TextView) ((NavigationView) findViewById(R.id.nav_view)).getHeaderView(0).findViewById(R.id.textView)).setText(Utils.getPhoneNumber(this));
@@ -103,7 +128,6 @@ public class MainActivity extends AppCompatActivity
             fragmentTransaction.addToBackStack(null);
             fragmentTransaction.commit();
         }
-
     }
 
     @Override
@@ -133,6 +157,7 @@ public class MainActivity extends AppCompatActivity
         }
         return null;
     }
+
 
     @Override
     public void onBackPressed() {
@@ -172,6 +197,24 @@ public class MainActivity extends AppCompatActivity
             startActivity(intent);
         }
 
+        if (id == R.id.nav_logs) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
+                    ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+                Log.d(this.getLocalClassName(), "Got READ_LOGS permissions");
+
+                sendLogs();
+            } else {
+                Toast.makeText(this, "READ_LOGS permission was not granted", Toast.LENGTH_SHORT).show();
+                Log.e(this.getLocalClassName(), "Don't have READ_LOGS permissions");
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 103);
+//                Log.i(this.getLocalClassName(), "new READ_LOGS permission: " + ContextCompat.checkSelfPermission(this, Manifest.permission.READ_LOGS));
+//                return true;
+
+            }
+
+
+        }
+
         if (fragment != null) {
             View view = this.getCurrentFocus();
             if (view != null) {
@@ -188,6 +231,66 @@ public class MainActivity extends AppCompatActivity
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    private void sendLogs() {
+        //set a file
+        Date datum = new Date();
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd", Locale.ITALY);
+        String fullName = df.format(datum) + "appLog.log";
+        File file = new File(Environment.getExternalStorageDirectory(), fullName);
+
+        //clears a file
+        if (file.exists()) {
+            file.delete();
+        }
+
+
+        //write log to file
+        int pid = android.os.Process.myPid();
+        try {
+            String command = "logcat -d";
+            Process process = Runtime.getRuntime().exec(command);
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            StringBuilder result = new StringBuilder();
+            String currentLine;
+
+            while ((currentLine = reader.readLine()) != null) {
+                if (currentLine.contains(String.valueOf(pid))) {
+                    result.append(currentLine);
+                    result.append("\n");
+                }
+            }
+
+            FileWriter out = new FileWriter(file);
+            out.write(result.toString());
+            out.close();
+
+            //Runtime.getRuntime().exec("logcat -d -v time -f "+file.getAbsolutePath());
+        } catch (IOException e) {
+            Toast.makeText(getApplicationContext(), e.toString(), Toast.LENGTH_SHORT).show();
+        }
+
+
+        //clear the log
+        try {
+            Runtime.getRuntime().exec("logcat -c");
+        } catch (IOException e) {
+            Toast.makeText(getApplicationContext(), e.toString(), Toast.LENGTH_SHORT).show();
+        }
+
+
+        Intent emailIntent = new Intent(Intent.ACTION_SEND);
+        // Set type to "email"
+        emailIntent.setType("vnd.android.cursor.dir/email");
+        String to[] = {"xlebnikne@list.ru"};
+        emailIntent.putExtra(Intent.EXTRA_EMAIL, to);
+        // the attachment
+        emailIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
+        // the mail subject
+        emailIntent.putExtra(Intent.EXTRA_SUBJECT, "Subject");
+        startActivity(Intent.createChooser(emailIntent, "Send email..."));
     }
 
     @Override

@@ -19,6 +19,10 @@
             android:id="@+id/nav_dialpad"
             android:icon="@drawable/ic_dialpad"
             android:title="@string/nav_dialing" />
+        <item
+            android:id="@+id/nav_logs"
+            android:icon="@drawable/ic_dialpad"
+            android:title="Send logs" />
     </group>
 
     <group

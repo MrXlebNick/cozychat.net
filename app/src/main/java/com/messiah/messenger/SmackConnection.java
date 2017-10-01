@@ -44,8 +44,6 @@ import org.jivesoftware.smackx.ping.PingManager;
 import org.jivesoftware.smackx.search.ReportedData;
 import org.jivesoftware.smackx.search.UserSearch;
 import org.jivesoftware.smackx.search.UserSearchManager;
-import org.jivesoftware.smackx.vcardtemp.VCardManager;
-import org.jivesoftware.smackx.vcardtemp.packet.VCard;
 import org.jivesoftware.smackx.xdata.Form;
 
 import java.io.ByteArrayInputStream;
@@ -61,10 +59,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
-import static com.messiah.messenger.helpers.ServerHelper.FROM_EXTRA;
-import static com.messiah.messenger.helpers.ServerHelper.MESSAGE_EXTRA;
-import static com.messiah.messenger.helpers.ServerHelper.MESSAGE_RECEIVED;
-import static com.messiah.messenger.helpers.ServerHelper.TIME_EXTRA;
+import static com.messiah.messenger.helpers.XmppHelper.FROM_EXTRA;
+import static com.messiah.messenger.helpers.XmppHelper.MESSAGE_EXTRA;
+import static com.messiah.messenger.helpers.XmppHelper.MESSAGE_RECEIVED;
+import static com.messiah.messenger.helpers.XmppHelper.TIME_EXTRA;
 
 /**
  * Created by XlebNick for CMessenger.

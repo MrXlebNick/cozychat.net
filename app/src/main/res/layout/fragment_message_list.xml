@@ -103,7 +103,7 @@
         android:layout_width="match_parent"
         android:visibility="gone"
         android:layout_height="133dp"
-        android:background="@color/tw__light_gray"
+        android:background="@color/light_gray"
         android:layout_alignParentBottom="true" />
 
     <!--<fragment-->

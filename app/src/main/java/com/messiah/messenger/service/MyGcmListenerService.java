@@ -5,7 +5,7 @@ import android.os.Bundle;
 import android.util.Log;
 
 import com.google.android.gms.gcm.GcmListenerService;
-import com.messiah.messenger.helpers.ServerHelper;
+import com.messiah.messenger.helpers.XmppHelper;
 
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.packet.Message;
@@ -24,8 +24,8 @@ public class MyGcmListenerService extends GcmListenerService {
         super.onMessageReceived(s, bundle);
         Log.d("***", "GCM message received " + bundle.getString("message"));
         try {
-            ServerHelper serverHelper = ServerHelper.getInstance(this);
-            serverHelper.processMessage(null, ((Message) PacketParserUtils.parseStanza(bundle.getString("message"))));
+            XmppHelper xmppHelper = XmppHelper.getInstance();
+            xmppHelper.processMessage(null, ((Message) PacketParserUtils.parseStanza(bundle.getString("message"))));
         } catch (XmlPullParserException | IOException | SmackException e) {
             e.printStackTrace();
         }

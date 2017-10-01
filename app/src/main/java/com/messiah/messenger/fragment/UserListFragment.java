@@ -24,7 +24,7 @@ import android.widget.EditText;
 
 import com.messiah.messenger.R;
 import com.messiah.messenger.adapter.UserAdapter;
-import com.messiah.messenger.helpers.ServerHelper;
+import com.messiah.messenger.helpers.XmppHelper;
 import com.messiah.messenger.model.User;
 import com.messiah.messenger.utils.Utils;
 
@@ -47,7 +47,7 @@ public class UserListFragment extends LoadableFragment {
 
     private OnListFragmentInteractionListener mListener;
     private RecyclerView recyclerView;
-    private ServerHelper connection;
+    private XmppHelper connection;
     private FloatingActionButton fab;
 
     private boolean isActive = false;
@@ -93,7 +93,7 @@ public class UserListFragment extends LoadableFragment {
 
             @Override
             protected Void doInBackground(Void... params) {
-                connection = ServerHelper.getInstance(getContext());
+                connection = XmppHelper.getInstance();
                 usrs = connection.getAllUsers();
                 return null;
             }
@@ -124,58 +124,55 @@ public class UserListFragment extends LoadableFragment {
                         user.save();
                     }
 
-                    ((UserAdapter) recyclerView.getAdapter()).setValues(friends);
+                    ((UserAdapter) recyclerView.getAdapter()).setValues(usrs);
 
-                    fab.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            View dialogLayout = View.inflate(getContext(), R.layout.invite_friend_dialog, null);
-                            final EditText editText = (EditText) dialogLayout.findViewById(R.id.et_phone);
-                            new AlertDialog.Builder(getContext())
-                                    .setView(dialogLayout)
-                                    .setTitle(R.string.enter_phone)
-                                    .setPositiveButton(R.string.invite,
-                                            new DialogInterface.OnClickListener() {
-                                                @Override
-                                                public void onClick(DialogInterface dialog, int which) {
-                                                    String invitingNumber = editText.getText().toString();
-                                                    if (invitingNumber.charAt(0) == '8')
-                                                        invitingNumber = "+7" + invitingNumber.substring(1);
+                    fab.setOnClickListener(v -> {
+                        View dialogLayout = View.inflate(getContext(), R.layout.invite_friend_dialog, null);
+                        final EditText editText = (EditText) dialogLayout.findViewById(R.id.et_phone);
+                        new AlertDialog.Builder(getContext())
+                                .setView(dialogLayout)
+                                .setTitle(R.string.enter_phone)
+                                .setPositiveButton(R.string.invite,
+                                        new DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(DialogInterface dialog, int which) {
+                                                String invitingNumber = editText.getText().toString();
+                                                if (invitingNumber.charAt(0) == '8')
+                                                    invitingNumber = "+7" + invitingNumber.substring(1);
 
-                                                    for (User user : usrs) {
-                                                        if (user.mPhoneNumber.equals(invitingNumber)) {
+                                                for (User user : usrs) {
+                                                    if (user.mPhoneNumber.equals(invitingNumber)) {
 
-                                                            if (friends.contains(user)) {
-                                                                Toaster.toast(getString(R.string.user_already_in_contact_list));
-                                                                return;
-                                                            }
-
-                                                            Toaster.toast(getString(R.string.user_is_registered_but_not_friended));
-
-                                                            Intent intent = new Intent(Intent.ACTION_INSERT);
-                                                            intent.setType(ContactsContract.Contacts.CONTENT_TYPE);
-
-                                                            intent.putExtra(ContactsContract.Intents.Insert.NAME, user.mFullName);
-                                                            intent.putExtra(ContactsContract.Intents.Insert.PHONE, user.mPhoneNumber);
-
-                                                            startActivityForResult(intent, PICK_CONTACT);
+                                                        if (friends.contains(user)) {
+                                                            Toaster.toast(getString(R.string.user_already_in_contact_list));
                                                             return;
                                                         }
-                                                    }
 
+                                                        Toaster.toast(getString(R.string.user_is_registered_but_not_friended));
 
-                                                    Toaster.toast(getString(R.string.user_not_using_app));
-                                                    Intent intent = new Intent(Intent.ACTION_SENDTO);
-                                                    intent.setData(Uri.parse("smsto:" + invitingNumber));
-                                                    intent.putExtra("sms_body", "Hello! I'm using CMessenger, it's just a miracle! Give it a try!");
-                                                    if (intent.resolveActivity(getContext().getPackageManager()) != null) {
-                                                        startActivity(intent);
+                                                        Intent intent = new Intent(Intent.ACTION_INSERT);
+                                                        intent.setType(ContactsContract.Contacts.CONTENT_TYPE);
+
+                                                        intent.putExtra(ContactsContract.Intents.Insert.NAME, user.mFullName);
+                                                        intent.putExtra(ContactsContract.Intents.Insert.PHONE, user.mPhoneNumber);
+
+                                                        startActivityForResult(intent, PICK_CONTACT);
+                                                        return;
                                                     }
                                                 }
-                                            })
-                                    .setNegativeButton(R.string.cancel, null)
-                                    .show();
-                        }
+
+
+                                                Toaster.toast(getString(R.string.user_not_using_app));
+                                                Intent intent = new Intent(Intent.ACTION_SENDTO);
+                                                intent.setData(Uri.parse("smsto:" + invitingNumber));
+                                                intent.putExtra("sms_body", "Hello! I'm using CMessenger, it's just a miracle! Give it a try!");
+                                                if (intent.resolveActivity(getContext().getPackageManager()) != null) {
+                                                    startActivity(intent);
+                                                }
+                                            }
+                                        })
+                                .setNegativeButton(R.string.cancel, null)
+                                .show();
                     });
                     onLoaded();
                 } else {
@@ -220,7 +217,7 @@ public class UserListFragment extends LoadableFragment {
         UserAdapter adapter = new UserAdapter(mListener);
         recyclerView.setAdapter(adapter);
 
-//        ServerHelper.getInstance(getContext()).addObserver(this);
+//        XmppHelper.getInstance(getContext()).addObserver(this);
 
         fab = (FloatingActionButton) view.findViewById(R.id.fab);
 

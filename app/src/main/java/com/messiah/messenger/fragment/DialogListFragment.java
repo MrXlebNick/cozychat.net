@@ -9,10 +9,11 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import com.messiah.messenger.R;
 import com.messiah.messenger.adapter.DialogAdapter;
-import com.messiah.messenger.helpers.ServerHelper;
+import com.messiah.messenger.helpers.XmppHelper;
 import com.messiah.messenger.model.Dialog;
 import com.messiah.messenger.model.Message;
 
@@ -31,6 +32,7 @@ public class DialogListFragment extends LoadableFragment implements Observer {
 
     private UserListFragment.OnListFragmentInteractionListener mListener;
     private RecyclerView recyclerView;
+    private TextView emptyView;
     private boolean isActive = false;
 
     /**
@@ -59,6 +61,7 @@ public class DialogListFragment extends LoadableFragment implements Observer {
         Context context = view.getContext();
         recyclerView = (RecyclerView) view.findViewById(R.id.list);
         recyclerView.setLayoutManager(new LinearLayoutManager(context));
+        emptyView = (TextView) view.findViewById(R.id.empty);
         DialogAdapter adapter = new DialogAdapter(mListener);
         recyclerView.setAdapter(adapter);
 
@@ -89,7 +92,7 @@ public class DialogListFragment extends LoadableFragment implements Observer {
 
     @Override
     public void onStop() {
-        ServerHelper.getInstance(getContext()).deleteObserver(this);
+        XmppHelper.getInstance().deleteObserver(this);
         super.onStop();
     }
 
@@ -102,7 +105,6 @@ public class DialogListFragment extends LoadableFragment implements Observer {
     @Override
     protected void onLoadStart() {
 
-
         Log.d("***", "update dialogs");
         List<Message> messages = Message.findWithQuery(Message.class,
                 "SELECT * FROM Message ORDER BY time");
@@ -110,7 +112,7 @@ public class DialogListFragment extends LoadableFragment implements Observer {
         for (Message message : messages) {
             boolean isDialogExist = false;
             for (Dialog dialog : dialogs) {
-                if ((message.isFromMe ? message.receiver : message.sender).equals(dialog.oppponent.mPhoneNumber)) {
+                if ((message.isFromMe ? message.receiver : message.sender).equals(dialog.peer.mPhoneNumber)) {
                     dialog.addMessage(message);
                     isDialogExist = true;
                     break;
@@ -123,6 +125,8 @@ public class DialogListFragment extends LoadableFragment implements Observer {
             }
 
         }
+        emptyView.setVisibility(dialogs.size() == 0 ? View.VISIBLE : View.GONE);
+
         ((DialogAdapter) recyclerView.getAdapter()).setValues(dialogs);
         onLoaded();
 
@@ -131,13 +135,7 @@ public class DialogListFragment extends LoadableFragment implements Observer {
     @Override
     public void onStart() {
         super.onStart();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-
-                ServerHelper.getInstance(getContext()).addObserver(DialogListFragment.this);
-            }
-        }).start();
+        new Thread(() -> XmppHelper.getInstance().addObserver(DialogListFragment.this)).start();
     }
 
     @Override

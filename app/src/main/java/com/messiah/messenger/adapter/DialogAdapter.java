@@ -36,7 +36,7 @@ public class DialogAdapter extends RecyclerView.Adapter<DialogAdapter.ViewHolder
     @Override
     public void onBindViewHolder(final ViewHolder holder, int position) {
         holder.mItem = mValues.get(position);
-        holder.mSenderView.setText(mValues.get(position).oppponent.mFullName);
+        holder.mSenderView.setText(mValues.get(position).peer.mFullName);
         holder.mMessageView.setText(mValues.get(position).message);
 
         holder.mMarkerView.setText(mValues.get(position).count + "");
@@ -48,7 +48,7 @@ public class DialogAdapter extends RecyclerView.Adapter<DialogAdapter.ViewHolder
                 if (null != mListener) {
                     // Notify the active callbacks interface (the activity, if the
                     // fragment is attached to one) that an item has been selected.
-                    mListener.onListFragmentInteraction(holder.mItem.oppponent);
+                    mListener.onListFragmentInteraction(holder.mItem.peer);
                 }
             }
         });

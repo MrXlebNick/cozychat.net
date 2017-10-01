@@ -2,12 +2,14 @@ package com.messiah.messenger.service;
 
 import android.app.IntentService;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.util.Log;
 
 import com.google.android.gms.gcm.GoogleCloudMessaging;
 import com.google.android.gms.iid.InstanceID;
+import com.messiah.messenger.CozyChatApplication;
 import com.messiah.messenger.R;
-import com.messiah.messenger.helpers.ServerHelper;
+import com.messiah.messenger.helpers.XmppHelper;
 import com.messiah.messenger.utils.Utils;
 
 import java.io.IOException;
@@ -32,7 +34,13 @@ public class RegistrationIntentService extends IntentService {
                     GoogleCloudMessaging.INSTANCE_ID_SCOPE, null);
             Log.d("***", "token" + token);
             Utils.saveGcmToken(this, token);
-            ServerHelper.getInstance(this).saveGcmToken(Utils.getGcmToken(this));
+            new AsyncTask<Void, Void, Void>() {
+                @Override
+                protected Void doInBackground(Void... params) {
+                    XmppHelper.getInstance().saveGcmToken(Utils.getGcmToken(CozyChatApplication.getContext()));
+                    return null;
+                }
+            };
         } catch (IOException e) {
             e.printStackTrace();
         }

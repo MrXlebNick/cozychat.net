@@ -17,7 +17,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import com.messiah.messenger.R;
-import com.messiah.messenger.helpers.ServerHelper;
+import com.messiah.messenger.helpers.XmppHelper;
 
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPException;
@@ -63,7 +63,7 @@ public class ProfileInfoFragment extends LoadableFragment {
                                 if (!TextUtils.isEmpty(emailEditText.getText().toString()))
                                     properties.put("email", emailEditText.getText().toString());
                                 try {
-                                    ServerHelper.getInstance(getContext()).setUserProperties(properties);
+                                    XmppHelper.getInstance().setUserProperties(properties);
                                 } catch (SmackException.NotConnectedException | XMPPException.XMPPErrorException | SmackException.NoResponseException e) {
                                     e.printStackTrace();
                                     Toaster.toast("An error occured, try again. Error: " + e.getMessage());
@@ -107,7 +107,7 @@ public class ProfileInfoFragment extends LoadableFragment {
     @Override
     protected void onLoadStart() {
         try {
-            properties = ServerHelper.getInstance(getContext()).getUserProperties();
+            properties = XmppHelper.getInstance().getUserProperties();
 
             nameView.setText(!TextUtils.isEmpty(properties.get("username")) ? properties.get("username") : "Secret Spy");
             phoneView.setText(!TextUtils.isEmpty(properties.get("phone")) ? properties.get("phone") : "Not specified");

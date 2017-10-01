@@ -5,7 +5,6 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.RingtoneManager;
 import android.net.sip.SipAudioCall;
-import android.net.sip.SipException;
 import android.net.sip.SipProfile;
 import android.os.Bundle;
 import android.os.Handler;
@@ -16,10 +15,19 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.messiah.messenger.R;
 import com.messiah.messenger.helpers.SipHelper;
+import com.messiah.messenger.service.PjsipService;
+
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.pjsip.pjsua2.CallInfo;
+import org.pjsip.pjsua2.CallOpParam;
+import org.pjsip.pjsua2.app.MyCall;
+import org.pjsip.pjsua2.pjsip_inv_state;
+import org.pjsip.pjsua2.pjsip_role_e;
+import org.pjsip.pjsua2.pjsip_status_code;
 
 public class DialActivity extends AppCompatActivity {
     public static final String IS_INCOMING_CALL = "isIncomingCall";
@@ -47,8 +55,7 @@ public class DialActivity extends AppCompatActivity {
 
         try {
             field = PowerManager.class.getClass().getField("PROXIMITY_SCREEN_OFF_WAKE_LOCK").getInt(null);
-        } catch (Throwable ignored) {
-        }
+        } catch (Throwable ignored) {}
 
         final SipAudioCall.Listener listener = new SipAudioCall.Listener() {
 
@@ -73,7 +80,7 @@ public class DialActivity extends AppCompatActivity {
             @Override
             public void onRingingBack(SipAudioCall call) {
                 Log.d("***", "onRingingBack");
-                super.onRingingBack(call);
+//                super.onRingingBack(call);
             }
 
             @Override
@@ -81,7 +88,6 @@ public class DialActivity extends AppCompatActivity {
 
                 super.onCallEstablished(call);
                 Log.d("***", "onCallEstablished " + call.isInCall() + " " + call.getState());
-
 
                 call.startAudio();
                 Log.d("***", "onCallEstablished1");
@@ -151,112 +157,150 @@ public class DialActivity extends AppCompatActivity {
         takeButton = (Button) findViewById(R.id.btn_take);
         declineButton = (Button) findViewById(R.id.btn_decline);
 
-        hangupButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Log.d("***", SipHelper.getInstance().call.getState() + " is state" );
-                SipHelper.getInstance().endCall();
-                endCall();
+        hangupButton.setOnClickListener(v -> endCall());
+        takeButton.setOnClickListener(v -> {
+//            if (PjsipService.currentCall != null){
+//                CallOpParam param = new CallOpParam();
+//                param.setStatusCode();
+//                PjsipService.currentCall.answer();
+//                showCall();
+//            }
+            CallOpParam param = new CallOpParam();
+            param.setStatusCode(pjsip_status_code.PJSIP_SC_OK);
+            try {
+                PjsipService.currentCall.answer(param);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
+            showCall();
         });
-        takeButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                SipHelper.getInstance().takeCall(getIntent(), listener);
-                showCall();
-            }
-        });
-        declineButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    SipHelper.getInstance().call.endCall();
-                } catch (SipException e) {
-                    e.printStackTrace();
-                }
-                endCall();
-            }
-        });
+        declineButton.setOnClickListener(v -> endCall());
 
         parent = findViewById(R.id.activity_dial);
         refreshCounterThread = new UpdateTextViewThread();
 
 
-        if (getIntent().getExtras() != null) {
-            if (getIntent().getBooleanExtra(IS_INCOMING_CALL, false)) {
-                displayCall();
+        if (PjsipService.currentCall != null) {
+            try {
+                if (PjsipService.currentCall.getInfo().getRole() == pjsip_role_e.PJSIP_ROLE_UAS) {
+                    displayCall();
 
-            } else {
-                SipHelper.getInstance().call(getIntent().getStringExtra("sip"), listener);
-                tryToDial();
+                } else {
+
+//                    SipHelper.getInstance().call(getIntent().getStringExtra("sip"), listener);
+                    tryToDial();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
+        } else {
+            finish();
         }
 
 
     }
 
     private void showCall() {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                seconds = 0;
-                Log.d("***", "starting call");
-                updateStatus("Calling");
-                clockView.setVisibility(View.VISIBLE);
-                if (refreshCounterThread != null) {
-                    refreshCounterThread.interrupt();
-                }
-                refreshCounterThread = new UpdateTextViewThread();
-                refreshCounterThread.start();
-                parent.setBackgroundResource(R.drawable.dial_screen_call_active_background);
-                hangupButton.setVisibility(View.VISIBLE);
-                ((View) takeButton.getParent()).setVisibility(View.GONE);
-
-                if (!wakeLock.isHeld()) {
-                    wakeLock.acquire();
-                }
-
-                if (thePlayer != null)
-                    thePlayer.release();
+        runOnUiThread(() -> {
+            seconds = 0;
+            Log.d("***", "starting call");
+            updateStatus("Calling");
+            clockView.setVisibility(View.VISIBLE);
+            if (refreshCounterThread != null) {
+                refreshCounterThread.interrupt();
             }
+            refreshCounterThread = new UpdateTextViewThread();
+            refreshCounterThread.start();
+            parent.setBackgroundResource(R.drawable.dial_screen_call_active_background);
+            hangupButton.setVisibility(View.VISIBLE);
+            ((View) takeButton.getParent()).setVisibility(View.GONE);
+
+            if (!wakeLock.isHeld()) {
+                wakeLock.acquire();
+            }
+
+            if (thePlayer != null)
+                thePlayer.release();
         });
 
     }
 
+
+
+    @Subscribe
+    public void onCallStateUpdated(PjsipService.CallStateEvent event){
+        runOnUiThread(() -> {
+            CallInfo ci = event.callInfo;
+            if (ci.getRole() == pjsip_role_e.PJSIP_ROLE_UAC) {
+                updateStatus("Ringing..");
+            }
+
+            if (ci.getState().swigValue() <
+                    pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED.swigValue()) {
+                if (ci.getRole() == pjsip_role_e.PJSIP_ROLE_UAS) {
+                    updateStatus("Incoming call..");
+		/* Default button texts are already 'Accept' & 'Reject' */
+                } else {
+                    updateStatus(ci.getStateText().equalsIgnoreCase("EARLY") ?  "Ringing..." : ci.getStateText());
+                }
+            } else if (ci.getState().swigValue() >=
+                    pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED.swigValue()) {
+                updateStatus(ci.getStateText().equalsIgnoreCase("EARLY") ?  "Ringing..." : ci.getStateText());
+                if (ci.getState() == pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED) {
+                    showCall();
+                } else if (ci.getState() ==
+                        pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED) {
+                    endCall();
+                    updateStatus("Call disconnected: " + ci.getLastReason());
+                }
+            }
+        });
+
+    }
 
     private void endCall(){
         endCall("Ended");
     }
     private void endCall(String message) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
+        runOnUiThread(() -> {
 
-                parent.setBackgroundResource(R.drawable.dial_screen_background);
-                hangupButton.setVisibility(View.GONE);
-                ((View) takeButton.getParent()).setVisibility(View.GONE);
-                if (wakeLock.isHeld()) {
-                    wakeLock.release();
-                }
-                if (thePlayer != null)
-                    thePlayer.release();
-
-                refreshCounterThread.setInterrupted(true);
-
-                Handler handler = new Handler();
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        DialActivity.this.finish();
-                    }
-                }, 2000);
+            parent.setBackgroundResource(R.drawable.dial_screen_background);
+            hangupButton.setVisibility(View.GONE);
+            ((View) takeButton.getParent()).setVisibility(View.GONE);
+            if (wakeLock.isHeld()) {
+                wakeLock.release();
             }
+            if (thePlayer != null)
+                thePlayer.release();
+
+            refreshCounterThread.setInterrupted(true);
+
+            Handler handler = new Handler();
+            handler.postDelayed(DialActivity.this::finish, 2000);
         });
         Log.d("***", "ending call");
         updateStatus(message);
-        SipHelper.getInstance().endCall();
 
+        try {
+            if (PjsipService.currentCall != null &&
+                    PjsipService.currentCall.getInfo().getRole() == pjsip_role_e.PJSIP_ROLE_UAC &&
+                    PjsipService.currentCall.getInfo().getState().swigValue() > pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED.swigValue()){
 
+                CallOpParam param = new CallOpParam();
+                param.setStatusCode(pjsip_status_code.PJSIP_SC_DECLINE);
+                PjsipService.currentCall.hangup(param);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        try {
+
+            PjsipService.currentCall.delete();
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
+        PjsipService.currentCall = null;
 
     }
 
@@ -295,6 +339,11 @@ public class DialActivity extends AppCompatActivity {
 
     private void updateStatus(String status) {
         statusView.setText(status);
+        try {
+            Log.d("pjsip", PjsipService.currentCall.getInfo().getStateText() );
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private class UpdateTextViewThread extends Thread {
@@ -308,21 +357,18 @@ public class DialActivity extends AppCompatActivity {
         public void run() {
             try {
                 while (!interrupted) {
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            String passedTime = "" + seconds / 60;
-                            if (passedTime.length() < 2)
-                                passedTime = "0" + passedTime;
-                            String passedSeconds = seconds % 60 + "";
-                            if (passedSeconds.length() < 2)
-                                passedSeconds = "0" + passedSeconds;
-                            passedTime += ":" + passedSeconds;
-                            clockView.setText(passedTime);
-                            clockView.invalidate();
-                            seconds++;
+                    runOnUiThread(() -> {
+                        String passedTime = "" + seconds / 60;
+                        if (passedTime.length() < 2)
+                            passedTime = "0" + passedTime;
+                        String passedSeconds = seconds % 60 + "";
+                        if (passedSeconds.length() < 2)
+                            passedSeconds = "0" + passedSeconds;
+                        passedTime += ":" + passedSeconds;
+                        clockView.setText(passedTime);
+                        clockView.invalidate();
+                        seconds++;
 
-                        }
                     });
                     Thread.sleep(1000);
                 }
@@ -336,90 +382,75 @@ public class DialActivity extends AppCompatActivity {
     }
 
     private void setEndedState(){
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
+        runOnUiThread(() -> {
 
-                parent.setBackgroundResource(R.drawable.dial_screen_background);
-                hangupButton.setVisibility(View.GONE);
-                ((View) takeButton.getParent()).setVisibility(View.GONE);
-                if (wakeLock.isHeld()) {
-                    wakeLock.release();
-                }
-                if (thePlayer != null)
-                    thePlayer.release();
-
-                refreshCounterThread.setInterrupted(true);
-
-                Handler handler = new Handler();
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        DialActivity.this.finish();
-                    }
-                }, 2000);
+            parent.setBackgroundResource(R.drawable.dial_screen_background);
+            hangupButton.setVisibility(View.GONE);
+            ((View) takeButton.getParent()).setVisibility(View.GONE);
+            if (wakeLock.isHeld()) {
+                wakeLock.release();
             }
+            if (thePlayer != null)
+                thePlayer.release();
+
+            refreshCounterThread.setInterrupted(true);
+
+            Handler handler = new Handler();
+            handler.postDelayed(DialActivity.this::finish, 2000);
         });
 
     }
 
     private void setIncomingState(){
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
+        runOnUiThread(() -> {
 
-
-                parent.setBackgroundResource(R.drawable.dial_screen_background);
-                hangupButton.setVisibility(View.GONE);
-                ((View) takeButton.getParent()).setVisibility(View.GONE);
-                if (wakeLock.isHeld()) {
-                    wakeLock.release();
-                }
-                if (thePlayer != null)
-                    thePlayer.release();
-
-                refreshCounterThread.setInterrupted(true);
-
-                Handler handler = new Handler();
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        DialActivity.this.finish();
-                    }
-                }, 2000);
+            parent.setBackgroundResource(R.drawable.dial_screen_background);
+            hangupButton.setVisibility(View.GONE);
+            ((View) takeButton.getParent()).setVisibility(View.GONE);
+            if (wakeLock.isHeld()) {
+                wakeLock.release();
             }
+            if (thePlayer != null)
+                thePlayer.release();
+
+            refreshCounterThread.setInterrupted(true);
+
+            Handler handler = new Handler();
+            handler.postDelayed(DialActivity.this::finish, 2000);
         });
 
     }
 
     private void setOutcominState(){
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
+        runOnUiThread(() -> {
 
-                parent.setBackgroundResource(R.drawable.dial_screen_background);
-                hangupButton.setVisibility(View.GONE);
-                ((View) takeButton.getParent()).setVisibility(View.GONE);
-                if (wakeLock.isHeld()) {
-                    wakeLock.release();
-                }
-                if (thePlayer != null)
-                    thePlayer.release();
-
-                refreshCounterThread.setInterrupted(true);
-
-                Handler handler = new Handler();
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        DialActivity.this.finish();
-                    }
-                }, 2000);
+            parent.setBackgroundResource(R.drawable.dial_screen_background);
+            hangupButton.setVisibility(View.GONE);
+            ((View) takeButton.getParent()).setVisibility(View.GONE);
+            if (wakeLock.isHeld()) {
+                wakeLock.release();
             }
+            if (thePlayer != null)
+                thePlayer.release();
+
+            refreshCounterThread.setInterrupted(true);
+
+            Handler handler = new Handler();
+            handler.postDelayed(DialActivity.this::finish, 2000);
         });
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        EventBus.getDefault().register(this);
+    }
 
+    @Override
+    protected void onStop() {
+        super.onStop();
+        EventBus.getDefault().unregister(this);
+    }
 
 }
 

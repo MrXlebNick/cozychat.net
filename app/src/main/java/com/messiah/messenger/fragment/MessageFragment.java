@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.media.MediaPlayer;
 import android.net.Uri;
@@ -12,6 +13,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
@@ -35,7 +37,6 @@ import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
-import com.github.angads25.filepicker.controller.DialogSelectionListener;
 import com.github.angads25.filepicker.model.DialogConfigs;
 import com.github.angads25.filepicker.model.DialogProperties;
 import com.github.angads25.filepicker.view.FilePickerDialog;
@@ -45,16 +46,19 @@ import com.messiah.messenger.R;
 import com.messiah.messenger.activity.DialActivity;
 import com.messiah.messenger.adapter.MessageAdapter;
 import com.messiah.messenger.helpers.DocumentHelper;
-import com.messiah.messenger.helpers.ServerHelper;
+import com.messiah.messenger.helpers.XmppHelper;
 import com.messiah.messenger.model.Message;
 import com.messiah.messenger.model.User;
+import com.messiah.messenger.service.PjsipService;
 import com.messiah.messenger.utils.Utils;
 
-import org.jivesoftware.smack.util.FileUtils;
+import org.jivesoftware.smack.SmackException;
+import org.jivesoftware.smack.XMPPException;
 
 import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
@@ -63,14 +67,6 @@ import io.github.rockerhieu.emojicon.EmojiconEditText;
 import io.github.rockerhieu.emojicon.EmojiconGridFragment;
 import io.github.rockerhieu.emojicon.EmojiconGridView;
 import io.github.rockerhieu.emojicon.emoji.Emojicon;
-import okhttp3.MediaType;
-import okhttp3.MultipartBody;
-import okhttp3.RequestBody;
-import okhttp3.ResponseBody;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-import retrofit2.Retrofit;
 import xdroid.toaster.Toaster;
 
 import static android.app.Activity.RESULT_OK;
@@ -91,7 +87,6 @@ public class MessageFragment extends LoadableFragment implements Observer {
     private List<Message> messages;
     private RecyclerView recyclerView;
     private EmojiconEditText editText;
-    //    private EmojiView emojiconsView;
     private boolean isNewMesageEmpty = true;
     private MediaPlayer mediaPlayer;
 
@@ -103,8 +98,7 @@ public class MessageFragment extends LoadableFragment implements Observer {
      * Mandatory empty constructor for the fragment manager to instantiate the
      * fragment (e.g. upon screen orientation changes).
      */
-    public MessageFragment() {
-    }
+    public MessageFragment() {}
 
     // TODO: Customize parameter initialization
     @SuppressWarnings("unused")
@@ -148,7 +142,7 @@ public class MessageFragment extends LoadableFragment implements Observer {
                 message.save();
                 onLoadStart();
 //
-//                FileManager fileManager = new Retrofit.Builder().baseUrl("http://http://ec2-35-165-67-249.us-west-2.compute.amazonaws.com:8080")
+//                FileManager fileManager = new Retrofit.Builder().baseUrl("http://http://ec2-35-162-177-84.us-west-2.compute.amazonaws.com:8080")
 //                        .build().create(FileManager.class);
 //                File file = new File(filePath);
 //
@@ -191,7 +185,7 @@ public class MessageFragment extends LoadableFragment implements Observer {
 //                        message.body = response.body().key;
 //                        message.update();
 //                        onLoadStart();
-//                        ServerHelper.getInstance(getContext()).sendMessage(message);
+//                        XmppHelper.getInstance(getContext()).sendMessage(message);
 //                    }
 //
 //                    @Override
@@ -345,7 +339,7 @@ public class MessageFragment extends LoadableFragment implements Observer {
                     @Override
                     protected Void doInBackground(String... params) {
                         try {
-                            ServerHelper.getInstance(getContext(), mPhoneNumber)
+                            XmppHelper.getInstance(mPhoneNumber)
                                     .sendMessage(mPhoneNumber,
                                             URLEncoder.encode(params[0], "utf-8"));
                         } catch (UnsupportedEncodingException e) {
@@ -399,7 +393,7 @@ public class MessageFragment extends LoadableFragment implements Observer {
 
     @Override
     public void onStop() {
-        ServerHelper.getInstance(getContext()).deleteObserver(this);
+        XmppHelper.getInstance().deleteObserver(this);
         isActive = false;
         super.onStop();
     }
@@ -422,9 +416,22 @@ public class MessageFragment extends LoadableFragment implements Observer {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 //        Toaster.toast("Feature is under construction");
-        if (SipManager.isVoipSupported(getContext()) && SipManager.isApiSupported(getContext())) {
+        if (true || SipManager.isVoipSupported(getContext()) && SipManager.isApiSupported(getContext())) {
+            if (ContextCompat.checkSelfPermission(getContext(), "android.permission.USE_SIP") !=
+                    PackageManager.PERMISSION_GRANTED &&
+                    ContextCompat.checkSelfPermission(getContext(), android.Manifest.permission.RECORD_AUDIO) !=
+                            PackageManager.PERMISSION_GRANTED ){
+                ActivityCompat.requestPermissions(getActivity(), new String[]{"android.permission.USE_SIP", android.Manifest.permission.RECORD_AUDIO}, 1010);
+                return true;
+            }
+//            if (mSipNumber == null || mSipNumber.isEmpty()){
+//                Toaster.toast("This user is unreachable via call");
+//                return true;
+//            }
+
+            PjsipService.call(mSipNumber);
             Intent intent = new Intent(getContext(), DialActivity.class);
-            intent.putExtra("sip", "6001");
+            intent.putExtra("sip", mSipNumber);
             startActivity(intent);
         } else {
             Toast.makeText(getContext(), "Your device does not support SIP stack, please wait for update", Toast.LENGTH_LONG).show();
@@ -456,29 +463,26 @@ public class MessageFragment extends LoadableFragment implements Observer {
             properties.extensions = null;
             FilePickerDialog dialog = new FilePickerDialog(getActivity(), properties);
             dialog.setTitle(getString(R.string.select_file));
-            dialog.setDialogSelectionListener(new DialogSelectionListener() {
-                @Override
-                public void onSelectedFilePaths(String[] files) {
-                    for (String filePath : files) {
-                        File file = new File(filePath);
-                        Uri returnUri = Uri.fromFile(file);
-                        if (filePath == null || filePath.isEmpty()) return;
+            dialog.setDialogSelectionListener(files -> {
+                for (String filePath : files) {
+                    File file = new File(filePath);
+                    Uri returnUri = Uri.fromFile(file);
+                    if (filePath == null || filePath.isEmpty()) return;
 
 
-                        final Message message = new Message();
-                        message.isFromMe = true;
-                        message.type = Constants.MESSAGE_TYPE_FILE;
-                        message.time = System.currentTimeMillis();
-                        message.receiver = mPhoneNumber;
-                        message.sender = Utils.getPhoneNumber(getContext());
-                        message.messageId = System.currentTimeMillis() + "";
-                        message.filePath = filePath;
-                        message.fileUri = returnUri.toString();
-                        message.fileName = new File(filePath).getName();
-                        message.save();
-                        onLoadStart();
+                    final Message message = new Message();
+                    message.isFromMe = true;
+                    message.type = Constants.MESSAGE_TYPE_FILE;
+                    message.time = System.currentTimeMillis();
+                    message.receiver = mPhoneNumber;
+                    message.sender = Utils.getPhoneNumber(getContext());
+                    message.messageId = System.currentTimeMillis() + "";
+                    message.filePath = filePath;
+                    message.fileUri = returnUri.toString();
+                    message.fileName = new File(filePath).getName();
+                    message.save();
+                    onLoadStart();
 //
-                    }
                 }
             });
             dialog.show();
@@ -523,7 +527,7 @@ public class MessageFragment extends LoadableFragment implements Observer {
     public void onStart() {
         super.onStart();
         isActive = true;
-        ServerHelper.getInstance(getContext()).addObserver(this);
+        XmppHelper.getInstance().addObserver(this);
     }
 
     @Override
@@ -532,7 +536,14 @@ public class MessageFragment extends LoadableFragment implements Observer {
         if (getArguments() != null) {
             mPhoneNumber = getArguments().getString(ARG_PHONE_NUMBER);
             mSipNumber = getArguments().getString(ARG_SIP_NUMBER);
-
+            Log.d("sipka", mSipNumber + "1");
+            try {
+                HashMap<String, String> properties = XmppHelper.getInstance().getUserProperties(mPhoneNumber);
+                mSipNumber = properties.get("sip");
+                Log.d("sipka", mSipNumber + "2");
+            } catch (SmackException.NotConnectedException | XMPPException.XMPPErrorException | SmackException.NoResponseException e) {
+                e.printStackTrace();
+            }
             try {
 
                 List<User> user = User.find(User.class, "m_phone_number = ?", mPhoneNumber);
@@ -569,7 +580,7 @@ public class MessageFragment extends LoadableFragment implements Observer {
             }
         };
         LocalBroadcastManager.getInstance(getContext()).registerReceiver((receiver),
-                new IntentFilter(ServerHelper.MESSAGE_RECEIVED)
+                new IntentFilter(XmppHelper.MESSAGE_RECEIVED)
         );
 
 
