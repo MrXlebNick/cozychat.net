@@ -31,6 +31,8 @@ import com.messiah.messenger.utils.Utils;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
 import xdroid.toaster.Toaster;
 
 /**
@@ -87,55 +89,41 @@ public class UserListFragment extends LoadableFragment {
 
         }
         new AsyncTask<Void, Void, Void>() {
-            List<User> usrs;
             List<User> contacts;
             List<User> friends = new ArrayList<>();
 
             @Override
             protected Void doInBackground(Void... params) {
                 connection = XmppHelper.getInstance();
-                usrs = connection.getAllUsers();
-                return null;
-            }
-
-            @Override
-            protected void onPreExecute() {
-
-                contacts = Utils.getAllContacts(getContext());
-                super.onPreExecute();
-
-            }
-
-            @Override
-            protected void onPostExecute(Void aVoid) {
-
-                if (usrs != null) {
-                    for (User user : usrs) {
-                        for (User contact : contacts) {
-                            if (user.mPhoneNumber.equals(contact.mPhoneNumber) && !user.mPhoneNumber.equals(Utils.getPhoneNumber(getContext()))) {
-                                user.mFullName = contact.mFullName;
+                connection.getAllUsersrx()
+                        .observeOn(AndroidSchedulers.mainThread()).subscribe(usrs -> {
+                    if (usrs != null) {
+                        for (User user : usrs) {
+                            for (User contact : contacts) {
+                                if (user.mPhoneNumber.equals(contact.mPhoneNumber) && !user.mPhoneNumber.equals(Utils.getPhoneNumber(getContext()))) {
+                                    user.mFullName = contact.mFullName;
 //                                if (unreadFrom.contains(user.mPhoneNumber)){
 //                                    user.hasUnread = true;
 //                                }
-                                friends.add(user);
-                                break;
+                                    friends.add(user);
+                                    break;
+                                }
                             }
+                            user.save();
                         }
-                        user.save();
-                    }
 
-                    ((UserAdapter) recyclerView.getAdapter()).setValues(usrs);
 
-                    fab.setOnClickListener(v -> {
-                        View dialogLayout = View.inflate(getContext(), R.layout.invite_friend_dialog, null);
-                        final EditText editText = (EditText) dialogLayout.findViewById(R.id.et_phone);
-                        new AlertDialog.Builder(getContext())
-                                .setView(dialogLayout)
-                                .setTitle(R.string.enter_phone)
-                                .setPositiveButton(R.string.invite,
-                                        new DialogInterface.OnClickListener() {
-                                            @Override
-                                            public void onClick(DialogInterface dialog, int which) {
+
+                        ((UserAdapter) recyclerView.getAdapter()).setValues(usrs);
+
+                        fab.setOnClickListener(v -> {
+                            View dialogLayout = View.inflate(getContext(), R.layout.invite_friend_dialog, null);
+                            final EditText editText = (EditText) dialogLayout.findViewById(R.id.et_phone);
+                            new AlertDialog.Builder(getContext())
+                                    .setView(dialogLayout)
+                                    .setTitle(R.string.enter_phone)
+                                    .setPositiveButton(R.string.invite,
+                                            (dialog, which) -> {
                                                 String invitingNumber = editText.getText().toString();
                                                 if (invitingNumber.charAt(0) == '8')
                                                     invitingNumber = "+7" + invitingNumber.substring(1);
@@ -169,15 +157,30 @@ public class UserListFragment extends LoadableFragment {
                                                 if (intent.resolveActivity(getContext().getPackageManager()) != null) {
                                                     startActivity(intent);
                                                 }
-                                            }
-                                        })
-                                .setNegativeButton(R.string.cancel, null)
-                                .show();
-                    });
-                    onLoaded();
-                } else {
-                    onFailed();
-                }
+                                            })
+                                    .setNegativeButton(R.string.cancel, null)
+                                    .show();
+                        });
+                        onLoaded();
+                    } else {
+                        onFailed();
+                    }
+                });
+                return null;
+            }
+
+            @Override
+            protected void onPreExecute() {
+
+                contacts = Utils.getAllContacts(getContext());
+                super.onPreExecute();
+
+            }
+
+            @Override
+            protected void onPostExecute(Void aVoid) {
+
+
 
 
                 super.onPostExecute(aVoid);

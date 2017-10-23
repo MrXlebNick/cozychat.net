@@ -17,6 +17,9 @@ import com.messiah.messenger.helpers.XmppHelper;
 import com.messiah.messenger.model.Dialog;
 import com.messiah.messenger.model.Message;
 
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Observable;
@@ -28,7 +31,7 @@ import java.util.Observer;
  * Activities containing this fragment MUST implement the {@link UserListFragment.OnListFragmentInteractionListener}
  * interface.
  */
-public class DialogListFragment extends LoadableFragment implements Observer {
+public class DialogListFragment extends LoadableFragment {
 
     private UserListFragment.OnListFragmentInteractionListener mListener;
     private RecyclerView recyclerView;
@@ -92,7 +95,7 @@ public class DialogListFragment extends LoadableFragment implements Observer {
 
     @Override
     public void onStop() {
-        XmppHelper.getInstance().deleteObserver(this);
+        EventBus.getDefault().unregister(this);
         super.onStop();
     }
 
@@ -135,19 +138,14 @@ public class DialogListFragment extends LoadableFragment implements Observer {
     @Override
     public void onStart() {
         super.onStart();
-        new Thread(() -> XmppHelper.getInstance().addObserver(DialogListFragment.this)).start();
+        EventBus.getDefault().register(this);
     }
 
-    @Override
-    public void update(Observable o, Object arg) {
+    @Subscribe
+    public void update(Message message) {
 
         Log.d("***", "DialogListFragment got the message");
         if (isActive)
-            getActivity().runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    load();
-                }
-            });
+            getActivity().runOnUiThread(this::load);
     }
 }

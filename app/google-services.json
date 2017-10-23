@@ -1,20 +1,35 @@
 {
   "project_info": {
-    "project_number": "1005436262624",
-    "project_id": "firebase-geechat"
+    "project_number": "17518467515",
+    "firebase_url": "https://messiah-pro.firebaseio.com",
+    "project_id": "messiah-pro",
+    "storage_bucket": "messiah-pro.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1005436262624:android:b3ae8a93eb739dad",
+        "mobilesdk_app_id": "1:17518467515:android:ff8ea702c0c7f355",
         "android_client_info": {
           "package_name": "com.messiah.messenger"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "17518467515-a663903m8rqjlp4bke8l0h6co5oq9sja.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.messiah.messenger",
+            "certificate_hash": "1eced43212621d5c50e3fdf25b0a6f9024f43bc4"
+          }
+        },
+        {
+          "client_id": "17518467515-05m1d111dk9nsi3t68389u2obp4eds4g.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyDvCKpqxcvK32Sd9gPZfoOR6bFwKBRiUoY"
+          "current_key": "AIzaSyCr-K3AUcQilddoT_cj8lNifBhakzmLtdc"
         }
       ],
       "services": {
@@ -22,11 +37,16 @@
           "status": 1
         },
         "appinvite_service": {
-          "status": 1,
-          "other_platform_oauth_client": []
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "17518467515-05m1d111dk9nsi3t68389u2obp4eds4g.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         },
         "ads_service": {
-          "status": 1
+          "status": 2
         }
       }
     }

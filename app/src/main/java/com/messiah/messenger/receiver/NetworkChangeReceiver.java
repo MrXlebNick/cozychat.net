@@ -29,7 +29,7 @@ public class NetworkChangeReceiver extends BroadcastReceiver {
             new AsyncTask<Void, Void, Void>() {
                 @Override
                 protected Void doInBackground(Void... params) {
-                    XmppHelper.getInstance().connect();
+                    XmppHelper.getInstance().getSignedInObservable();
                     SipHelper.getInstance().register();
                     return null;
                 }

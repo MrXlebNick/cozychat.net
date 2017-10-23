@@ -45,7 +45,7 @@ import io.reactivex.annotations.NonNull;
 
 public class SipHelper {
 
-    private static final String SERVER_DOMAIN = "ec2-35-162-177-84.us-west-2.compute.amazonaws.com";
+    private static final String SERVER_DOMAIN = "ec2-18-216-77-83.us-east-2.compute.amazonaws.com";
     private static SipHelper instance = null;
     private SipManager mSipManager = null;
     private SipProfile mSipProfile = null;

@@ -91,7 +91,7 @@ public class PjsipService extends Service implements MyAppObserver {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        return START_STICKY;
+        return START_NOT_STICKY;
     }
 
     @Nullable

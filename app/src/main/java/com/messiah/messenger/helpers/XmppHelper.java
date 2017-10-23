@@ -1,9 +1,12 @@
 package com.messiah.messenger.helpers;
 
 import android.content.Intent;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.support.v4.content.LocalBroadcastManager;
 import android.text.TextUtils;
 import android.util.Log;
+import android.webkit.MimeTypeMap;
 
 import com.google.gson.Gson;
 import com.messiah.messenger.Constants;
@@ -11,26 +14,26 @@ import com.messiah.messenger.CozyChatApplication;
 import com.messiah.messenger.fragment.MessageFragment;
 import com.messiah.messenger.model.Message;
 import com.messiah.messenger.model.User;
+import com.messiah.messenger.utils.FileIOApi;
+import com.messiah.messenger.utils.FileResponse;
 import com.messiah.messenger.utils.Utils;
 
+import org.greenrobot.eventbus.EventBus;
 import org.jivesoftware.smack.AbstractXMPPConnection;
 import org.jivesoftware.smack.ConnectionConfiguration;
 import org.jivesoftware.smack.ConnectionListener;
 import org.jivesoftware.smack.SASLAuthentication;
 import org.jivesoftware.smack.SmackConfiguration;
-import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPConnection;
-import org.jivesoftware.smack.XMPPException;
-import org.jivesoftware.smack.chat.Chat;
-import org.jivesoftware.smack.chat.ChatManager;
 import org.jivesoftware.smack.chat.ChatManagerListener;
-import org.jivesoftware.smack.chat.ChatMessageListener;
-import org.jivesoftware.smack.sasl.SASLErrorException;
+import org.jivesoftware.smack.chat2.Chat;
+import org.jivesoftware.smack.chat2.ChatManager;
+import org.jivesoftware.smack.chat2.IncomingChatMessageListener;
 import org.jivesoftware.smack.sasl.SASLMechanism;
 import org.jivesoftware.smack.sasl.provided.SASLDigestMD5Mechanism;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
-import org.jivesoftware.smackx.iqregister.AccountManager;
+//import org.jivesoftware.smackx.omemo.OmemoManager;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptManager;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
 import org.jivesoftware.smackx.search.ReportedData;
@@ -39,18 +42,31 @@ import org.jivesoftware.smackx.search.UserSearchManager;
 import org.jivesoftware.smackx.vcardtemp.VCardManager;
 import org.jivesoftware.smackx.vcardtemp.packet.VCard;
 import org.jivesoftware.smackx.xdata.Form;
+import org.jxmpp.jid.DomainBareJid;
+import org.jxmpp.jid.EntityBareJid;
+import org.jxmpp.jid.impl.JidCreate;
+import org.jxmpp.stringprep.XmppStringprepException;
 
-import java.io.IOException;
+import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Observable;
 import java.util.regex.Pattern;
 
-import xdroid.toaster.Toaster;
+import io.reactivex.Observable;
+import io.reactivex.schedulers.Schedulers;
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
+import okhttp3.ResponseBody;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 import static com.messiah.messenger.Constants.MESSAGE_FILE_INDEX_PREFIX;
 
@@ -58,35 +74,23 @@ import static com.messiah.messenger.Constants.MESSAGE_FILE_INDEX_PREFIX;
  * Created by XlebNick for CMessenger.
  */
 
-public class XmppHelper extends Observable implements ChatMessageListener {
+public class XmppHelper implements IncomingChatMessageListener {
 
     public static final String MESSAGE_RECEIVED = "cozychat.net.MESSAGE_RECEIVED";
     public static final String FROM_EXTRA = "cozychat.net.FROM_EXTRA";
     public static final String TIME_EXTRA = "cozychat.net.DATE_EXTRA";
     public static final String MESSAGE_EXTRA = "cozychat.net.MESSAGE_EXTRA";
-    private static final String SERVICE_NAME = "ec2-35-162-177-84.us-west-2.compute.amazonaws.com";
+    private static final String SERVICE_NAME = "ec2-18-216-77-83.us-east-2.compute.amazonaws.com";
     private static XmppHelper mInstance;
-    private io.reactivex.Observable<XMPPConnection> connectionObservable;
     private String mLogin;
     private AbstractXMPPConnection mConnection;
-    private int loginTrials = 0;
-
-    private int getUsersTrials = 0;
-
     private ChatManagerListener chatListener;
-
-    private ArrayList<Runnable> tasksOnLogin = new ArrayList<>();
-//    private FileTransferManager transferManager;
-
-//    private FileListener fileListener;
-//
-//    private List<FileTransfer> fileTransfers = new ArrayList<>();
-//    private boolean isFileDownloading;
+//    private OmemoManager omemoManager;
 
     private XmppHelper(String login) {
         mLogin = login;
+        Log.d("xmpp", login);
         init();
-//        fileListener = new FileListener();
     }
 
     public static XmppHelper getInstance() {
@@ -101,8 +105,8 @@ public class XmppHelper extends Observable implements ChatMessageListener {
             String savedLogin = Utils.getPhoneNumber(CozyChatApplication.getContext());
             if (savedLogin == null) {
                 if (login == null) {
-//                    throw new NullPointerException(
-//                            "No saved login was found and argument login is null");
+                    throw new NullPointerException(
+                            "No saved login was found and argument login is null");
                 }
                 mInstance = new XmppHelper(login);
             } else {
@@ -114,15 +118,21 @@ public class XmppHelper extends Observable implements ChatMessageListener {
 
     private void init() {
         Log.d("xmpp", "init");
-        XMPPTCPConnectionConfiguration config = XMPPTCPConnectionConfiguration.builder()
-                .setUsernameAndPassword(mLogin, mLogin)
-                .setServiceName(SERVICE_NAME)
-                .setHost(SERVICE_NAME)
-                .setConnectTimeout(10000)
-                .setPort(5222)
-                .setDebuggerEnabled(true)
-                .setSecurityMode(ConnectionConfiguration.SecurityMode.disabled)
-                .build();
+
+        XMPPTCPConnectionConfiguration config = null;
+        try {
+            config = XMPPTCPConnectionConfiguration.builder()
+                    .setUsernameAndPassword(mLogin, mLogin)
+                    .setXmppDomain(SERVICE_NAME)
+                    .setHost(SERVICE_NAME)
+                    .setConnectTimeout(10000)
+                    .setPort(5222)
+                    .setDebuggerEnabled(true)
+                    .setSecurityMode(ConnectionConfiguration.SecurityMode.disabled)
+                    .build();
+        } catch (XmppStringprepException e) {
+            e.printStackTrace();
+        }
 
         SmackConfiguration.DEBUG = true;
 
@@ -174,6 +184,8 @@ public class XmppHelper extends Observable implements ChatMessageListener {
                 Log.i("xmpp", "Failed to reconnect to the XMPP server.");
             }
         });
+
+        setMessageListener();
 
     }
 
@@ -235,76 +247,73 @@ public class XmppHelper extends Observable implements ChatMessageListener {
     }
 
 
-    public void connect() {
-
-        if (mConnection == null) {
-            init();
-        }
-
-        try {
-            loginOrRegister();
-        } catch (XMPPException | SmackException | IOException e) {
-            e.printStackTrace();
-        }
-        setMessageListener();
-        DeliveryReceiptManager.getInstanceFor(mConnection)
-                .addReceiptReceivedListener((fromJid, toJid, deliveryReceiptId, stanza) -> Log.d(
-                        "***",
-                        "onReceiptReceived: from: " + fromJid + " to: " + toJid +
-                                " deliveryReceiptId: " + deliveryReceiptId + " stanza: " + stanza));
-    }
-
-
-
-    public void loginOrRegister() throws IOException, XMPPException, SmackException {
-        try {
-            if (! mConnection.isConnected()) { mConnection.connect(); }
-            loginTrials = 0;
-        } catch (SASLErrorException e) {
+//    public void connect() {
+//
+//        if (mConnection == null) {
+//            init();
+//        }
+//
+//        try {
+//            loginOrRegister();
+//        } catch (XMPPException | SmackException | IOException e) {
+//            e.printStackTrace();
+//        }
+//        setMessageListener();
+//        DeliveryReceiptManager.getInstanceFor(mConnection)
+//                .addReceiptReceivedListener((fromJid, toJid, deliveryReceiptId, stanza) -> Log.d(
+//                        "***",
+//                        "onReceiptReceived: from: " + fromJid + " to: " + toJid +
+//                                " deliveryReceiptId: " + deliveryReceiptId + " stanza: " + stanza));
+//    }
 
 
-            e.printStackTrace();
-            AccountManager accountManager = AccountManager.getInstance(mConnection);
-            try {
-                accountManager.sensitiveOperationOverInsecureConnection(true);
-                accountManager.createAccount(mLogin, mLogin);
-                mConnection.disconnect();
-                loginOrRegister();
-            } catch (XMPPException | IOException | SmackException e1) {
-                e1.printStackTrace();
-                throw e1;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
 
-        try {
-
-            if (! mConnection.isAuthenticated()) {
-
-                mConnection.login(mLogin, mLogin, null);
-                Log.d("***", "login as good boys do");
-            }
-            loginTrials = 0;
-        } catch (SASLErrorException e) {
-
-            Log.d("***", "login asl");
-            e.printStackTrace();
-            AccountManager accountManager = AccountManager.getInstance(mConnection);
-            try {
-                accountManager.sensitiveOperationOverInsecureConnection(true);
-                accountManager.createAccount(mLogin, mLogin);
-                loginOrRegister();
-            } catch (XMPPException | IOException | SmackException e1) {
-                e1.printStackTrace();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        getUserProperties(mLogin);
-
-    }
+//    public void loginOrRegister() throws IOException, XMPPException, SmackException {
+//        try {
+//            if (! mConnection.isConnected()) { mConnection.connect(); }
+//        } catch (SASLErrorException e) {
+//
+//
+//            e.printStackTrace();
+//            AccountManager accountManager = AccountManager.getInstance(mConnection);
+//            try {
+//                accountManager.sensitiveOperationOverInsecureConnection(true);
+//                accountManager.createAccount(mLogin, mLogin);
+//                mConnection.disconnect();
+//                loginOrRegister();
+//            } catch (XMPPException | IOException | SmackException e1) {
+//                e1.printStackTrace();
+//                throw e1;
+//            }
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//
+//        try {
+//
+//            if (! mConnection.isAuthenticated()) {
+//
+//                mConnection.login(mLogin, mLogin, null);
+//                Log.d("***", "login as good boys do");
+//            }
+//        } catch (SASLErrorException e) {
+//
+//            Log.d("***", "login asl");
+//            e.printStackTrace();
+//            AccountManager accountManager = AccountManager.getInstance(mConnection);
+//            try {
+//                accountManager.sensitiveOperationOverInsecureConnection(true);
+//                accountManager.createAccount(mLogin, mLogin);
+//                loginOrRegister();
+//            } catch (XMPPException | IOException | SmackException e1) {
+//                e1.printStackTrace();
+//            }
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//
+//        getUserPropertiesrx(mLogin);
+//    }
     
     public io.reactivex.Observable<HashMap<String, String>> getUserPropertiesrx(){
         return getUserPropertiesrx(mLogin);
@@ -312,148 +321,308 @@ public class XmppHelper extends Observable implements ChatMessageListener {
     
     public io.reactivex.Observable<HashMap<String, String>> getUserPropertiesrx(String phoneNumber){
 
-        return getSignedInObservable().map(emitter -> {
+        return getSignedInObservable().subscribeOn(Schedulers.newThread()).map(emitter -> {
             VCardManager vCardManager = VCardManager.getInstanceFor(mConnection);
-            VCard vCard = vCardManager.loadVCard(phoneNumber + "@" + SERVICE_NAME);
+            EntityBareJid userJid = JidCreate.entityBareFrom(phoneNumber + "@" + SERVICE_NAME);
+            VCard vCard = vCardManager.loadVCard(userJid);
             HashMap<String, String> properties = new HashMap<>();
+
 
             properties.put("username", vCard.getNickName());
             properties.put("phone", phoneNumber);
             properties.put("email", vCard.getEmailHome());
+            properties.put("niknam", vCard.getField("niknam"));
+            properties.put("name", vCard.getField("name"));
+            properties.put("date", vCard.getField("date"));
+            properties.put("email", vCard.getField("email"));
+            properties.put("region", vCard.getField("region"));
+            properties.put("country", vCard.getField("country"));
+            properties.put("place", vCard.getField("place"));
+            properties.put("nativePlace", vCard.getField("nativePlace"));
+            properties.put("languages", vCard.getField("languages"));
+            properties.put("education1", vCard.getField("education1"));
+            properties.put("education2", vCard.getField("education2"));
+            properties.put("website", vCard.getField("website"));
+            properties.put("phone1", vCard.getField("phone1"));
+            properties.put("phone2", vCard.getField("phone2"));
+            properties.put("phone3", vCard.getField("phone3"));
+            properties.put("gender", vCard.getField("gender"));
+            properties.put("avatarKey", vCard.getField("avatarKey"));
+            properties.put("avatarFileName", vCard.getField("avatarFileName"));
 
             String sipNumber = vCard.getField("sip");
             properties.put("sip", sipNumber);
             Log.d("***",
                     phoneNumber + " " + Utils.getPhoneNumber(CozyChatApplication.getContext()) + " " +
                             sipNumber);
-//            if (phoneNumber.equals(Utils.getPhoneNumber(CozyChatApplication.getContext())) &&
-//                    ! TextUtils.isEmpty(sipNumber)) {
-//                vCard.setField("sip", "6011");
-//                vCard.save(mConnection);
-//                Utils.putSipNumber(CozyChatApplication.getContext(), sipNumber);
-//                SipHelper.getInstance().register();
-//            }
+            if (phoneNumber.equals(Utils.getPhoneNumber(CozyChatApplication.getContext())) &&
+                    ! TextUtils.isEmpty(sipNumber)) {
+                Utils.putSipNumber(CozyChatApplication.getContext(), sipNumber);
+            }
             return properties;
         });
     }
 
-    private io.reactivex.Observable<XMPPConnection> getSignedInObservable() {
+    private io.reactivex.Observable<XMPPConnection> getConnectedObservable() {
         if (mConnection == null)
             init();
         io.reactivex.Observable<XMPPConnection> observable = io.reactivex.Observable.just(mConnection);
         if (!mConnection.isConnected())
             observable = observable.flatMap(o -> connectrx());
+        return observable;
+    }
+
+    public io.reactivex.Observable<XMPPConnection> getSignedInObservable() {
+        io.reactivex.Observable<XMPPConnection> observable = getConnectedObservable();
         if (!mConnection.isAuthenticated())
             observable = observable.flatMap(o -> loginrx());
         return observable;
     }
 
-    public HashMap<String, String> getUserProperties() throws SmackException.NotConnectedException,
-            XMPPException.XMPPErrorException, SmackException.NoResponseException {
-        return getUserProperties(mLogin);
-    }
+//    public HashMap<String, String> getUserPropertiesrx() throws SmackException.NotConnectedException,
+//            XMPPException.XMPPErrorException, SmackException.NoResponseException {
+//        return getUserProperties(mLogin);
+//    }
 
-    public void setUserProperties(HashMap<String, String> properties)
-            throws SmackException.NotConnectedException,
-            XMPPException.XMPPErrorException,
-            SmackException.NoResponseException {
-        if (! mConnection.isConnected()) {
-            try {
-                loginOrRegister();
-            } catch (SmackException e) {
-                e.printStackTrace();
-                if (e instanceof SmackException.ConnectionException) {
-                    loginTrials = 0;
-                    Toaster.toast("Network error, try later");
-                    return;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                Toaster.toast("An error occured: " + e.getMessage());
-            }
-        }
+    public void uploadAvatar(File avatar, Callback<FileResponse> callback){
 
-        VCard vCard = new VCard();
-
-        vCard.setNickName(properties.get("username"));
-        vCard.setEmailHome(properties.get("email"));
-        VCardManager.getInstanceFor(mConnection).saveVCard(vCard);
-    }
-
-    public HashMap<String, String> getUserProperties(String phoneNumber)
-            throws SmackException.NotConnectedException,
-            XMPPException.XMPPErrorException, SmackException.NoResponseException {
-
-        if (! mConnection.isConnected() || ! mConnection.isAuthenticated()) {
-            try {
-                loginOrRegister();
-                tasksOnLogin.add(() -> {
-                    try {
-                        getUserProperties(phoneNumber);
-                    } catch (SmackException.NotConnectedException | XMPPException.XMPPErrorException | SmackException.NoResponseException e) {
-                        e.printStackTrace();
-                    }
-                });
-            } catch (SmackException e) {
-                e.printStackTrace();
-                if (e instanceof SmackException.ConnectionException) {
-                    loginTrials = 0;
-                    Toaster.toast("Network error, try later");
-                    return null;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                Toaster.toast("An error occured: " + e.getMessage());
-            }
-        }
-
-
-        Log.d("sipka", phoneNumber + "@" + SERVICE_NAME);
-        VCardManager vCardManager = VCardManager.getInstanceFor(mConnection);
-        VCard vCard = vCardManager.loadVCard(phoneNumber + "@" + SERVICE_NAME);
-        HashMap<String, String> properties = new HashMap<>();
-
-        properties.put("username", vCard.getNickName());
-        properties.put("phone", phoneNumber);
-        properties.put("email", vCard.getEmailHome());
-
-        String sipNumber = vCard.getField("sip");
-        properties.put("sip", sipNumber);
-        Log.d("***",
-                phoneNumber + " " + Utils.getPhoneNumber(CozyChatApplication.getContext()) + " " +
-                        sipNumber);
-        if (phoneNumber.equals(Utils.getPhoneNumber(CozyChatApplication.getContext())) &&
-                ! TextUtils.isEmpty(sipNumber)) {
-            vCard.setField("sip", "6011");
-            vCard.save(mConnection);
-            Utils.putSipNumber(CozyChatApplication.getContext(), sipNumber);
-            SipHelper.getInstance().register();
-        }
-        return properties;
-    }
-
-    public List<User> getAllUsers() {
-        if (! mConnection.isConnected()) {
-            try {
-                loginOrRegister();
-            } catch (SmackException e) {
-                e.printStackTrace();
-                if (e instanceof SmackException.ConnectionException) {
-                    loginTrials = 0;
-                    Toaster.toast("Network error, try later");
-                    return null;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                Toaster.toast("An error occured: " + e.getMessage());
-            }
-        }
+        RequestBody requestFile;
         try {
+
+            String extension = MimeTypeMap.getFileExtensionFromUrl(avatar.getAbsolutePath());
+
+            requestFile = RequestBody.create(
+                    MediaType.parse(MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)),
+                    avatar);
+        } catch (Exception e){
+            e.printStackTrace();
+            String mediaTypeString = CozyChatApplication.getContext().getContentResolver().getType(Uri.fromFile(avatar));
+            if (mediaTypeString == null || mediaTypeString.isEmpty()){
+                requestFile = RequestBody.create(null, avatar);
+            } else {
+                requestFile = RequestBody.create(
+                        MediaType.parse(CozyChatApplication.getContext().getContentResolver().getType(Uri.fromFile(avatar))),
+                        avatar);
+            }
+
+        }
+
+        MultipartBody.Part body =
+                MultipartBody.Part.createFormData(Constants.FILE_MULTIPART_NAME, avatar.getName(), requestFile);
+
+
+
+        FileIOApi retrofit = new Retrofit.Builder().baseUrl("http://ec2-18-216-77-83.us-east-2.compute.amazonaws.com:8080")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build().create(FileIOApi.class);
+
+
+        retrofit.upload(body).enqueue(callback);
+
+
+    }
+
+    public io.reactivex.Observable<File> downloadAvatarRx(String avatarKey, String avatarFileName){
+        return Observable.create(e -> {
+            Callback<ResponseBody> callback = new Callback<ResponseBody>() {
+                @Override
+                public void onResponse(Call<ResponseBody> call, final Response<ResponseBody> response) {
+                    if (response.isSuccessful()) {
+                        new AsyncTask<Void, Void, Void>() {
+                            @Override
+                            protected Void doInBackground(Void... voids) {
+                                e.onNext(DocumentHelper.writeResponseBodyToDisk(response.body(), avatarFileName));
+                                e.onComplete();
+                                return null;
+                            }
+
+
+                        }.execute();
+                    } else {
+                        e.onError(new NullPointerException());
+                        Log.d("***", "on response failure ");
+//                                setStatus(Message.FILE_STATUS_FAILED);
+                    }
+
+                }
+
+                @Override
+                public void onFailure(Call<ResponseBody> call, Throwable t) {
+//                            setStatus(Message.FILE_STATUS_FAILED);
+                    e.onError(t);
+                    t.printStackTrace();
+                }
+            };
+
+            FileIOApi retrofit = new Retrofit.Builder().baseUrl("http://ec2-18-216-77-83.us-east-2.compute.amazonaws.com:8080")
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build().create(FileIOApi.class);
+            retrofit.getFile(avatarKey).enqueue(callback);
+        });
+    }
+
+    public io.reactivex.Observable<Boolean> setUserPropertiesrx(HashMap<String, String> properties){
+        return getSignedInObservable().subscribeOn(Schedulers.newThread()).map(xmppConnection -> {
+
+            VCardManager vCardManager = VCardManager.getInstanceFor(mConnection);
+            VCard vCard = vCardManager.loadVCard();
+
+            Log.d("profile", "size " + properties.size());
+
+            for (Map.Entry<String, String> entry : properties.entrySet()){
+
+                Log.d("profile", entry.getKey() + " " + entry.getValue());
+                if (!(entry.getKey().equals("niknam") && entry.getValue().equals("NickName")))
+                    vCard.setField(entry.getKey(), entry.getValue());
+            }
+            vCard.save(mConnection);
+//            VCardManager.getInstanceFor(mConnection).saveVCard(vCard);
+            return true;
+        });
+
+    }
+
+//    public HashMap<String, String> getUserProperties(String phoneNumber)
+//            throws SmackException.NotConnectedException,
+//            XMPPException.XMPPErrorException, SmackException.NoResponseException {
+//
+//        if (! mConnection.isConnected() || ! mConnection.isAuthenticated()) {
+//            try {
+//                loginOrRegister();
+//                tasksOnLogin.add(() -> {
+//                    try {
+//                        getUserProperties(phoneNumber);
+//                    } catch (SmackException.NotConnectedException | XMPPException.XMPPErrorException | SmackException.NoResponseException e) {
+//                        e.printStackTrace();
+//                    }
+//                });
+//            } catch (SmackException e) {
+//                e.printStackTrace();
+//                if (e instanceof SmackException.ConnectionException) {
+//                    loginTrials = 0;
+//                    Toaster.toast("Network error, try later");
+//                    return null;
+//                }
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                Toaster.toast("An error occured: " + e.getMessage());
+//            }
+//        }
+//
+//
+//        Log.d("sipka", phoneNumber + "@" + SERVICE_NAME);
+//        VCardManager vCardManager = VCardManager.getInstanceFor(mConnection);
+//        VCard vCard = vCardManager.loadVCard(phoneNumber + "@" + SERVICE_NAME);
+//        HashMap<String, String> properties = new HashMap<>();
+//
+//        properties.put("username", vCard.getNickName());
+//        properties.put("phone", phoneNumber);
+//        properties.put("email", vCard.getEmailHome());
+//
+//        String sipNumber = vCard.getField("sip");
+//        properties.put("sip", sipNumber);
+//        Log.d("***",
+//                phoneNumber + " " + Utils.getPhoneNumber(CozyChatApplication.getContext()) + " " +
+//                        sipNumber);
+//        if (phoneNumber.equals(Utils.getPhoneNumber(CozyChatApplication.getContext())) &&
+//                ! TextUtils.isEmpty(sipNumber)) {
+//            vCard.setField("sip", "6011");
+//            vCard.save(mConnection);
+//            Utils.putSipNumber(CozyChatApplication.getContext(), sipNumber);
+//            SipHelper.getInstance().register();
+//        }
+//        return properties;
+//    }
+
+//    public List<User> getAllUsers() {
+//        if (! mConnection.isConnected()) {
+//            try {
+//                loginOrRegister();
+//            } catch (SmackException e) {
+//                e.printStackTrace();
+//                if (e instanceof SmackException.ConnectionException) {
+//                    loginTrials = 0;
+//                    Toaster.toast("Network error, try later");
+//                    return null;
+//                }
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                Toaster.toast("An error occured: " + e.getMessage());
+//            }
+//        }
+//        try {
+//            UserSearchManager manager = new UserSearchManager(mConnection);
+//            String searchFormString = "search." + mConnection.getServiceName();
+//            Form searchForm;
+//
+//            searchForm = manager.getSearchForm(searchFormString);
+//            Form answerForm = searchForm.createAnswerForm();
+//
+//            UserSearch userSearch = new UserSearch();
+//            answerForm.setAnswer("Username", true);
+//            answerForm.setAnswer("search", "*");
+//
+//            ReportedData results =
+//                    userSearch.sendSearchForm(mConnection, answerForm, searchFormString);
+//            if (results != null) {
+//                List<User> users = new ArrayList<>();
+//                List<ReportedData.Row> rows = results.getRows();
+//                for (ReportedData.Row row : rows) {
+//                    User user = new User();
+//                    user.mPhoneNumber =
+//                            row.getValues("Username").toString().replaceAll("[\\[\\]]", "");
+//                    if (row.getValues("Name") != null) {
+//                        user.mFullName =
+//                                row.getValues("Name").toString().replaceAll("[\\[\\]]", "");
+//                    }
+//                    if (row.getValues("Email") != null) {
+//                        user.mSipNumber =
+//                                row.getValues("Email").toString().replaceAll("[\\[\\]]", "");
+//                    }
+//                    if (row.getValues("sip") != null) {
+//                        user.mSipNumber =
+//                                row.getValues("sip").toString().replaceAll("[\\[\\]]", "");
+//                    }
+//                    users.add(user);
+//                }
+//
+//                getUsersTrials = 0;
+//                return users;
+//            } else {
+//                Log.d("***", "No result found");
+//            }
+//
+//
+//        } catch (SmackException.NoResponseException | XMPPException.XMPPErrorException
+//                | SmackException.NotConnectedException e) {
+//            getUsersTrials++;
+//            if (getUsersTrials > 5) {
+//                getUsersTrials = 0;
+//                return null;
+//            }
+//            e.printStackTrace();
+//        } catch (IllegalArgumentException e1) {
+//            e1.printStackTrace();
+//            try {
+//                loginOrRegister();
+//            } catch (IOException | XMPPException | SmackException e) {
+//                e.printStackTrace();
+//
+//            }
+//        }
+//        return null;
+//    }
+
+    public io.reactivex.Observable<List<User>> getAllUsersrx() {
+        return getSignedInObservable().subscribeOn(Schedulers.newThread()).map(xmppConnection -> {
+
             UserSearchManager manager = new UserSearchManager(mConnection);
             String searchFormString = "search." + mConnection.getServiceName();
             Form searchForm;
 
-            searchForm = manager.getSearchForm(searchFormString);
+            DomainBareJid searchJid = JidCreate.domainBareFrom("search." + mConnection.getServiceName());
+
+            searchForm = manager.getSearchForm(searchJid);
             Form answerForm = searchForm.createAnswerForm();
 
             UserSearch userSearch = new UserSearch();
@@ -461,54 +630,33 @@ public class XmppHelper extends Observable implements ChatMessageListener {
             answerForm.setAnswer("search", "*");
 
             ReportedData results =
-                    userSearch.sendSearchForm(mConnection, answerForm, searchFormString);
-            if (results != null) {
-                List<User> users = new ArrayList<>();
-                List<ReportedData.Row> rows = results.getRows();
-                for (ReportedData.Row row : rows) {
-                    User user = new User();
-                    user.mPhoneNumber =
-                            row.getValues("Username").toString().replaceAll("[\\[\\]]", "");
-                    if (row.getValues("Name") != null) {
-                        user.mFullName =
-                                row.getValues("Name").toString().replaceAll("[\\[\\]]", "");
-                    }
-                    if (row.getValues("Email") != null) {
-                        user.mSipNumber =
-                                row.getValues("Email").toString().replaceAll("[\\[\\]]", "");
-                    }
-                    if (row.getValues("sip") != null) {
-                        user.mSipNumber =
-                                row.getValues("sip").toString().replaceAll("[\\[\\]]", "");
-                    }
-                    users.add(user);
+                    userSearch.sendSearchForm(mConnection, answerForm, searchJid);
+            List<User> users = new ArrayList<>();
+            List<ReportedData.Row> rows = results.getRows();
+            for (ReportedData.Row row : rows) {
+                User user = new User();
+                user.mPhoneNumber =
+                        row.getValues("Username").toString().replaceAll("[\\[\\]]", "");
+                if (row.getValues("Name") != null) {
+                    user.mFullName =
+                            row.getValues("Name").toString().replaceAll("[\\[\\]]", "");
                 }
-
-                getUsersTrials = 0;
-                return users;
-            } else {
-                Log.d("***", "No result found");
+                if (row.getValues("Email") != null) {
+                    user.mSipNumber =
+                            row.getValues("Email").toString().replaceAll("[\\[\\]]", "");
+                }
+                if (row.getValues("sip") != null) {
+                    user.mSipNumber =
+                            row.getValues("sip").toString().replaceAll("[\\[\\]]", "");
+                }
+                users.add(user);
             }
 
+//            getUsersTrials = 0;
+            return users;
 
-        } catch (SmackException.NoResponseException | XMPPException.XMPPErrorException
-                | SmackException.NotConnectedException e) {
-            getUsersTrials++;
-            if (getUsersTrials > 5) {
-                getUsersTrials = 0;
-                return null;
-            }
-            e.printStackTrace();
-        } catch (IllegalArgumentException e1) {
-            e1.printStackTrace();
-            try {
-                loginOrRegister();
-            } catch (IOException | XMPPException | SmackException e) {
-                e.printStackTrace();
+        });
 
-            }
-        }
-        return null;
     }
 
     public void setMessageListener() {
@@ -516,51 +664,65 @@ public class XmppHelper extends Observable implements ChatMessageListener {
         ChatManager chatManager = ChatManager.getInstanceFor(mConnection);
         Log.d("shit",
                 "setMessageListener " + mConnection.toString() + " " + chatManager.toString());
-//        setReceiveFileListener();
-        if (chatListener == null) {
-            chatListener = (chat, createdLocally) -> {
-                Log.d("shit", "chatCreated");
-                chat.addMessageListener(XmppHelper.this);
-            };
-        }
+//        if (chatListener == null) {
+//            chatListener = (chat, createdLocally) -> {
+//                Log.d("shit", "chatCreated");
+//                chat.addMessageListener(XmppHelper.this);
+//            };
+//        }
         try {
-            chatManager.removeChatListener(chatListener);
+            chatManager.removeListener(this);
         } catch (NullPointerException e) {
             e.printStackTrace();
-            // show message and don't give any fuck
         }
-        chatManager.addChatListener(chatListener);
+        chatManager.addIncomingListener(this);
     }
 
-    public void sendMessage(String mPhoneNumber, String messageString) {
-        if (! mConnection.isConnected()) {
-            try {
-                loginOrRegister();
-            } catch (SmackException e) {
-                e.printStackTrace();
-                if (e instanceof SmackException.ConnectionException) {
-                    loginTrials = 0;
-                    Toaster.toast("Network error, try later");
-                    return;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                Toaster.toast("An error occurred: " + e.getMessage());
-                return;
-            }
-        }
+    public io.reactivex.Observable<Message> sendMessagerx(String mPhoneNumber, String messageString) {
+        return getSignedInObservable().subscribeOn(Schedulers.newThread()).map(xmppConnection -> {
+            org.jivesoftware.smack.packet.Message message = new org.jivesoftware.smack.packet.Message();
+            message.setBody(messageString);
 
-        org.jivesoftware.smack.packet.Message message = new org.jivesoftware.smack.packet.Message();
-        message.setBody(messageString);
-
-        ChatManager chatManager = ChatManager.getInstanceFor(mConnection);
-        try {
+            EntityBareJid userJid = JidCreate.entityBareFrom(mPhoneNumber + "@" + SERVICE_NAME);
+            ChatManager chatManager = ChatManager.getInstanceFor(mConnection);
             Chat chat =
-                    chatManager.createChat(mPhoneNumber + "@" + SERVICE_NAME);
+                    chatManager.chatWith(userJid);
+            
+////
+//            try {
+//                HashMap<OmemoDevice, OmemoFingerprint> fingerprints =
+//                        omemoManager.getActiveFingerprints(userJid);
+//                for (OmemoDevice d : fingerprints.keySet()) {
+//                    Log.d("encrypting", "trust " + OmemoKeyUtil.prettyFingerprint(fingerprints.get(d)));
+//                    omemoManager.trustOmemoIdentity(d, fingerprints.get(d));
+//                }
+//            } catch (Exception e){
+//                e.printStackTrace();
+//            }
+
 
             String deliveryReceiptId = DeliveryReceiptRequest.addTo(message);
+//            OmemoManager.getInstanceFor(mConnection).buildSessionsWith(userJid);
 
-            chat.sendMessage(message);
+//            org.jivesoftware.smack.packet.Message encrypted = null;
+//            try {
+//                encrypted = OmemoManager.getInstanceFor(mConnection).encrypt(userJid, message.toString());
+//            }
+//            // In case of undecided devices
+//            catch (UndecidedOmemoIdentityException e) {
+//                e.printStackTrace();
+//                Log.d("encrypting", "Undecided Identities: ");
+//                for (OmemoDevice device : e.getUntrustedDevices()) {
+//                    Log.d("encrypting", device.toString());
+//                }
+//            }
+//            //In case we cannot establish session with some devices
+//            catch (CannotEstablishOmemoSessionException e) {
+//                e.printStackTrace();
+//                encrypted = omemoManager.encryptForExistingSessions(e, message.toString());
+//            }
+
+            chat.send(message);
             Message messageForDb = new Message();
             messageForDb.sender = Utils.getPhoneNumber(CozyChatApplication.getContext());
             messageForDb.receiver = mPhoneNumber;
@@ -574,65 +736,63 @@ public class XmppHelper extends Observable implements ChatMessageListener {
                 e.printStackTrace();
             }
             messageForDb.save();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            Toaster.toast("Error while sending message: " + e.getMessage());
-        }
+            return messageForDb;
+        });
     }
 
     public void saveGcmToken(String token) {
-        try {
-            VCard vCard = VCardManager.getInstanceFor(mConnection)
-                    .loadVCard();
-            Log.d("***", "magic is gong to happen" + new Gson().toJson(vCard));
-            vCard.setField("GCMID", token);
-//            VCardManager.getInstanceFor(mConnection).saveVCard(vCard);
-            vCard.save(mConnection);
-            Log.d("***", "magic happened");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void sendMessage(Message localMessage) {
-        if (! mConnection.isConnected()) {
+        getSignedInObservable().subscribe(xmppConnection -> {
             try {
-                loginOrRegister();
-            } catch (SmackException e) {
-                e.printStackTrace();
-                if (e instanceof SmackException.ConnectionException) {
-                    loginTrials = 0;
-                    Toaster.toast("Network error, try later");
-                    return;
-                }
+                VCard vCard = VCardManager.getInstanceFor(mConnection)
+                        .loadVCard();
+                Log.d("***", "magic is gong to happen" + new Gson().toJson(vCard));
+                vCard.setField("GCMID", token);
+                vCard.save(mConnection);
+                Log.d("***", "magic happened");
             } catch (Exception e) {
                 e.printStackTrace();
-                Toaster.toast("An error occurred: " + e.getMessage());
-                return;
             }
-        }
-        org.jivesoftware.smack.packet.Message message = new org.jivesoftware.smack.packet.Message();
-        message.setBody(localMessage.body);
-
-        ChatManager chatManager = ChatManager.getInstanceFor(mConnection);
-        try {
-            Chat chat =
-                    chatManager.createChat(localMessage.receiver + "@" + SERVICE_NAME);
-
-            String deliveryReceiptId = DeliveryReceiptRequest.addTo(message);
-
-
-            chat.sendMessage(message);
-            localMessage.messageId = deliveryReceiptId;
-            localMessage.save();
-        } catch (Exception e) {
-            e.printStackTrace();
-            Toaster.toast("Error while sending message: " + e.getMessage());
-        }
-
-
+        });
     }
+
+//    public void sendMessage(Message localMessage) {
+//        if (! mConnection.isConnected()) {
+//            try {
+//                loginOrRegister();
+//            } catch (SmackException e) {
+//                e.printStackTrace();
+//                if (e instanceof SmackException.ConnectionException) {
+//                    loginTrials = 0;
+//                    Toaster.toast("Network error, try later");
+//                    return;
+//                }
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                Toaster.toast("An error occurred: " + e.getMessage());
+//                return;
+//            }
+//        }
+//        org.jivesoftware.smack.packet.Message message = new org.jivesoftware.smack.packet.Message();
+//        message.setBody(localMessage.body);
+//
+//        ChatManager chatManager = ChatManager.getInstanceFor(mConnection);
+//        try {
+//            Chat chat =
+//                    chatManager.createChat(localMessage.receiver + "@" + SERVICE_NAME);
+//
+//            String deliveryReceiptId = DeliveryReceiptRequest.addTo(message);
+//
+//
+//            chat.sendMessage(message);
+//            localMessage.messageId = deliveryReceiptId;
+//            localMessage.save();
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            Toaster.toast("Error while sending message: " + e.getMessage());
+//        }
+//
+//
+//    }
 
     //    private void receiveFile() {
 //        // TODO Auto-generated method stub
@@ -746,112 +906,52 @@ public class XmppHelper extends Observable implements ChatMessageListener {
 ////        receiveFile();
 //
 //    }
-    @Override
-    public void processMessage(Chat chat, org.jivesoftware.smack.packet.Message message) {
-        String body = "";
-        try {
-            body = URLDecoder.decode(message.getBody(), "utf-8");
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-        Message messageForDb = new Message();
 
-        if (body.contains(MESSAGE_FILE_INDEX_PREFIX)) {
-            String[] parts = body.split(Pattern.quote(MESSAGE_FILE_INDEX_PREFIX));
-            messageForDb.body = parts[0];
-            messageForDb.fileName = parts[1];
-            messageForDb.type = Constants.MESSAGE_TYPE_FILE;
 
-        } else {
 
-            messageForDb.type = Constants.MESSAGE_TYPE_TEXT;
-            messageForDb.body = body;
-        }
+    public io.reactivex.Observable<Boolean> sendFileMessagerx(Message mItem, String messageString) {
+        return getSignedInObservable().subscribeOn(Schedulers.newThread()).map(xmppConnection -> {
+            org.jivesoftware.smack.packet.Message message = new org.jivesoftware.smack.packet.Message();
+            message.setBody(messageString);
 
-        messageForDb.sender = message.getFrom().substring(0, message.getFrom().indexOf("@"));
-        messageForDb.isFromMe = false;
-        messageForDb.time = System.currentTimeMillis();
-        messageForDb.messageId = message.getStanzaId();
-        messageForDb.receiver = Utils.getPhoneNumber(CozyChatApplication.getContext());
-
-        Log.d("***", messageForDb.body + " " + messageForDb.sender + " " + message.getStanzaId());
-        if (! TextUtils.isEmpty(messageForDb.body)) {
-            messageForDb.save();
-            if (! MessageFragment.isActive) {
-                Utils.sendNotification(CozyChatApplication.getContext());
-            }
-            setChanged();
-            notifyObservers();
-        }
-
-        LocalBroadcastManager broadcaster =
-                LocalBroadcastManager.getInstance(CozyChatApplication.getContext());
-
-        Intent intent = new Intent(MESSAGE_RECEIVED);
-        if (message != null) { intent.putExtra(MESSAGE_EXTRA, messageForDb.body); }
-        intent.putExtra(FROM_EXTRA, messageForDb.receiver);
-        intent.putExtra(TIME_EXTRA, messageForDb.time);
-        broadcaster.sendBroadcast(intent);
-
-    }
-
-    public void sendFileMessage(Message mItem, String messageString) {
-        if (! mConnection.isConnected()) {
-            try {
-                loginOrRegister();
-            } catch (SmackException e) {
-                e.printStackTrace();
-                if (e instanceof SmackException.ConnectionException) {
-                    loginTrials = 0;
-                    Toaster.toast("Network error, try later");
-                    return;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                Toaster.toast("An error occurred: " + e.getMessage());
-                return;
-            }
-        }
-
-        org.jivesoftware.smack.packet.Message message = new org.jivesoftware.smack.packet.Message();
-        message.setBody(messageString);
-
-        ChatManager chatManager = ChatManager.getInstanceFor(mConnection);
-        try {
+            EntityBareJid userJid = JidCreate.entityBareFrom(mItem.receiver + "@" + SERVICE_NAME);
+            ChatManager chatManager = ChatManager.getInstanceFor(mConnection);
             Chat chat =
-                    chatManager.createChat(mItem.receiver + "@" + SERVICE_NAME);
+                    chatManager.chatWith(userJid);
 
             String deliveryReceiptId = DeliveryReceiptRequest.addTo(message);
 
 
-            chat.sendMessage(message);
+            chat.send(message);
             mItem.messageId = deliveryReceiptId;
             mItem.body = messageString;
             mItem.fileKey = messageString.split(Constants.MESSAGE_FILE_INDEX_PREFIX)[0];
             mItem.update();
+            return true;
+        });
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            Toaster.toast("Error while sending message: " + e.getMessage());
-        }
+
     }
 
-    public void createUser(String login, String email, String password)
-            throws SmackException.NotConnectedException, XMPPException.XMPPErrorException, SmackException.NoResponseException {
-        Log.d("xmpp", "create user");
-        AccountManager accountManager = AccountManager.getInstance(mConnection);
-        accountManager.sensitiveOperationOverInsecureConnection(true);
+//    public io.reactivex.Observable<Boolean> createUserrx(String login, String email, String password) {
+//
+//        return getConnectedObservable().subscribeOn(Schedulers.newThread()).map( xmppConnection -> {
+//
+//            Log.d("xmpp", "create user");
+//            AccountManager accountManager = AccountManager.getInstance(mConnection);
+//            accountManager.sensitiveOperationOverInsecureConnection(true);
+//
+//            Map<String, String> attributes = new HashMap<>();
+//            attributes.put("email", email);
+//            accountManager.createAccount(login, password, attributes);
+//            return true;
+//        });
+//    }
 
-        Map<String, String> attributes = new HashMap<>();
-        attributes.put("email", email);
-        accountManager.createAccount(login, password, attributes);
-    }
-
-    public io.reactivex.Observable<XMPPConnection> loginrx(String mLogin, String mPassword){
+    private io.reactivex.Observable<XMPPConnection> loginrx(){
         if (mConnection == null) {
             init();
         }
-
         return io.reactivex.Observable.create(emitter -> {
             ConnectionListener listener = new ConnectionListener() {
                 @Override
@@ -863,6 +963,29 @@ public class XmppHelper extends Observable implements ChatMessageListener {
 
                     emitter.onNext(connection);
                     connection.removeConnectionListener(this);
+
+//                    try {
+//                        SignalOmemoService.acknowledgeLicense();
+//                        SignalOmemoService.setup();
+//
+//                        Log.d("encrypting", OmemoManager.serverSupportsOmemo(mConnection, JidCreate.domainBareFrom(SERVICE_NAME)) + " " );
+//
+//                        OmemoConfiguration.setFileBasedOmemoStoreDefaultPath(DocumentHelper.createOrOpenOmemoFile());
+//                        omemoManager = OmemoManager.getInstanceFor(mConnection);
+//                        omemoManager.addOmemoMessageListener(new OmemoMessageListener() {
+//                            @Override
+//                            public void onOmemoMessageReceived(String decryptedBody, org.jivesoftware.smack.packet.Message encryptedMessage, org.jivesoftware.smack.packet.Message wrappingMessage, OmemoMessageInformation omemoInformation) {
+//                                Log.d("omemo-test", "(O) " + encryptedMessage.getFrom() + ": " + decryptedBody);
+//                            }
+//
+//                            @Override
+//                            public void onOmemoKeyTransportReceived(CipherAndAuthTag cipherAndAuthTag, org.jivesoftware.smack.packet.Message message, org.jivesoftware.smack.packet.Message wrappingMessage, OmemoMessageInformation omemoInformation) {
+//
+//                            }
+//                        });
+//                    } catch (Exception e){
+//                        e.printStackTrace();
+//                    }
                 }
 
                 @Override
@@ -893,16 +1016,67 @@ public class XmppHelper extends Observable implements ChatMessageListener {
             };
             mConnection.addConnectionListener(listener);
             try {
-                mConnection.login(mLogin, mPassword, null);
+                mConnection.login(mLogin, mLogin, null);
             } catch (Exception e){
                 emitter.onError(e);
             }
         });
     }
 
-    public io.reactivex.Observable<XMPPConnection> loginrx() {
-        return loginrx("", "");
+    @Override
+    public void newIncomingMessage(EntityBareJid from, org.jivesoftware.smack.packet.Message message, Chat chat) {
+        String body = "";
+        try {
+            body = URLDecoder.decode(message.getBody(), "utf-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        Message messageForDb = new Message();
+
+        if (body.contains(MESSAGE_FILE_INDEX_PREFIX)) {
+            String[] parts = body.split(Pattern.quote(MESSAGE_FILE_INDEX_PREFIX));
+            messageForDb.body = parts[0];
+            messageForDb.fileName = parts[1];
+            messageForDb.type = Constants.MESSAGE_TYPE_FILE;
+
+        } else {
+
+            messageForDb.type = Constants.MESSAGE_TYPE_TEXT;
+            messageForDb.body = body;
+        }
+
+        messageForDb.sender = from.getLocalpartOrNull().intern();
+        messageForDb.isFromMe = false;
+        messageForDb.time = System.currentTimeMillis();
+        messageForDb.messageId = message.getStanzaId();
+        messageForDb.receiver = Utils.getPhoneNumber(CozyChatApplication.getContext());
+
+        Log.d("***", messageForDb.body + " " + messageForDb.sender + " " + message.getStanzaId());
+        if (! TextUtils.isEmpty(messageForDb.body)) {
+            messageForDb.save();
+            if (! MessageFragment.isActive) {
+                Utils.sendNotification(CozyChatApplication.getContext());
+            }
+            EventBus.getDefault().post(messageForDb);
+        }
+
+        LocalBroadcastManager broadcaster =
+                LocalBroadcastManager.getInstance(CozyChatApplication.getContext());
+
+        Intent intent = new Intent(MESSAGE_RECEIVED);
+        intent.putExtra(MESSAGE_EXTRA, messageForDb.body);
+        intent.putExtra(FROM_EXTRA, messageForDb.receiver);
+        intent.putExtra(TIME_EXTRA, messageForDb.time);
+        broadcaster.sendBroadcast(intent);
+
     }
+
+
+
+
+//    public io.reactivex.Observable<XMPPConnection> loginrx() {
+//        return loginrx(mLogin, mLogin);
+//    }
 
 //    public FileTransfer getIncomingFileTrnsfer(String messageId) {
 //        for ( FileTransfer transfer : fileTransfers)

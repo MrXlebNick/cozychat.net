@@ -21,100 +21,80 @@
         android:layout_gravity="center"
         android:visibility="gone"/>
 
-    <ScrollView
-        android:id="@+id/login_form"
+    <LinearLayout
         android:layout_gravity="center"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:id="@+id/content">
 
         <LinearLayout
-            android:id="@+id/email_login_form"
+            android:id="@+id/login_form"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:animateLayoutChanges="true"
+            android:orientation="horizontal">
+            <com.hbb20.CountryCodePicker
+                android:id="@+id/ccp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <AutoCompleteTextView
+                android:id="@+id/phone"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/prompt_phone"
+                android:inputType="phone"
+                android:maxLines="1"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/code_confirmation_form"
+            android:visibility="gone"
             android:orientation="vertical">
 
-            <android.support.design.widget.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <AutoCompleteTextView
-                    android:id="@+id/login"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="@string/prompt_login"
-                    android:inputType="textEmailAddress"
-                    android:maxLines="1"/>
-
-            </android.support.design.widget.TextInputLayout>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:textAlignment="center"
+                android:id="@+id/code_was_sent"/>
 
             <android.support.design.widget.TextInputLayout
                 android:layout_width="match_parent"
-                android:id="@+id/email_container"
-                android:visibility="gone"
-                android:layout_height="wrap_content">
-
-                <AutoCompleteTextView
-                    android:id="@+id/email"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="@string/prompt_email"
-                    android:inputType="textEmailAddress"
-                    android:maxLines="1"/>
-
-            </android.support.design.widget.TextInputLayout>
-
-            <android.support.design.widget.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <AutoCompleteTextView
-                    android:id="@+id/password"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="@string/prompt_password"
-                    android:inputType="textPassword"
-                    android:maxLines="1"/>
-
-            </android.support.design.widget.TextInputLayout>
-
-            <android.support.design.widget.TextInputLayout
-                android:layout_width="match_parent"
-                android:visibility="gone"
-                android:id="@+id/repeat_password_container"
                 android:layout_height="wrap_content">
 
                 <EditText
-                    android:id="@+id/repeat_password"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/repeat_password"
-                    android:inputType="textPassword"
-                    android:maxLines="1"/>
-
+                    android:id="@+id/code"
+                    android:inputType="number"
+                    android:hint="@string/hint_code"/>
             </android.support.design.widget.TextInputLayout>
 
-            <Button
-                android:id="@+id/email_sign_in_button"
-                android:layout_width="match_parent"
-                style="@style/Widget.AppCompat.Button"
-                android:layout_height="wrap_content"
-                app:backgroundTint="@color/login_button_color"
-                android:textColor="@color/login_button_text_color"
-                android:layout_marginTop="16dp"
-                android:text="@string/action_sign_in"
-                android:textStyle="bold"/>
-
             <TextView
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:id="@+id/no_account"
-                android:onClick="changeLoginForms"
-                android:text="@string/no_account_yet"
-                android:textAlignment="center"
-                android:paddingTop="16dp"/>
+                android:layout_gravity="center"
+                android:textColor="#999"
+                android:text="@string/wrong_number"
+                android:onClick="undoSendCode"/>
 
         </LinearLayout>
-    </ScrollView>
+
+
+        <Button
+            android:id="@+id/email_sign_in_button"
+            android:layout_width="match_parent"
+            style="@style/Widget.AppCompat.Button"
+            android:layout_height="wrap_content"
+            app:backgroundTint="@color/login_button_color"
+            android:textColor="@color/login_button_text_color"
+            android:layout_marginTop="16dp"
+            android:text="@string/send_code"
+            android:textStyle="bold"/>
+    </LinearLayout>
 
 </FrameLayout>

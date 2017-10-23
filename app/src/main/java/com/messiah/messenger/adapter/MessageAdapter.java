@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
+import android.os.Looper;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.AppCompatImageView;
@@ -35,12 +36,15 @@ import com.squareup.picasso.Picasso;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Observable;
 import java.util.Observer;
 
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
@@ -52,7 +56,7 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 import xdroid.toaster.Toaster;
 
-public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHolder> implements Observer {
+public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHolder> {
 
     private static final int TYPE_MESSAGE = 0;
     private static final int TYPE_FILE = 1;
@@ -63,9 +67,8 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
 
     public MessageAdapter(Context context) {
 //        XmppHelper.getInstance(context).setFileListener(this);
-        XmppHelper.getInstance().addObserver(this);
         mContext = context;
-        retrofit = new Retrofit.Builder().baseUrl("http://ec2-35-162-177-84.us-west-2.compute.amazonaws.com:8080")
+        retrofit = new Retrofit.Builder().baseUrl("http://ec2-18-216-77-83.us-east-2.compute.amazonaws.com:8080")
                 .addConverterFactory(GsonConverterFactory.create())
                 .build().create(FileIOApi.class);
     }
@@ -255,21 +258,23 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
 //    }
 
     public void setValues(List<Message> mValues) {
-        this.mValues = mValues;
+        this.mValues = new ArrayList<>(mValues);
+//        notifyItemRangeChanged(0, mValues.size());
         notifyDataSetChanged();
-        notifyItemRangeChanged(0, mValues.size());
     }
 
-    @Override
-    public void update(Observable o, Object arg) {
-
-//        notifyDataSetChanged();
-//        notifyItemRangeChanged(0, getItemCount()-1);
-    }
+//    @Override
+//    public void update(Observable o, Object arg) {
+//
+////        notifyDataSetChanged();
+////        notifyItemRangeChanged(0, getItemCount()-1);
+//    }
 
     public void setOpponent(String opponent) {
         this.opponent = opponent;
     }
+
+
 
     public class ViewHolder extends RecyclerView.ViewHolder {
         final View mView;
@@ -321,34 +326,31 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
 //            refresh();
 
 
-            mActionView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Log.d("***", mItem.fileStatus);
-                    switch (mItem.fileStatus) {
-                        case Message.FILE_STATUS_LOADING:
-                            if (call != null) {
-                                call.cancel();
-                                setStatus(Message.FILE_STATUS_FAILED);
-                            }
-                            break;
-                        case Message.FILE_STATUS_FAILED:
-                            call = call.clone();
-                            call.enqueue(callback);
-                            setStatus(Message.FILE_STATUS_LOADING);
-                            //TODO: enqueue
-                            break;
-                        case Message.FILE_STATUS_LOADED:
-                            try {
-                                Intent intent = new Intent(Intent.ACTION_VIEW);
-                                intent.setDataAndType(Uri.parse(mItem.fileUri), Utils.getMimeType(mItem.filePath));
-                                intent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
-                                mContext.startActivity(intent);
-                            } catch (Exception e) {
-                                Toaster.toast(mContext.getString(R.string.error_in_opening_file) + e.getMessage());
-                            }
-                            break;
-                    }
+            mActionView.setOnClickListener(v -> {
+                Log.d("***", mItem.fileStatus);
+                switch (mItem.fileStatus) {
+                    case Message.FILE_STATUS_LOADING:
+                        if (call != null) {
+                            call.cancel();
+                            setStatus(Message.FILE_STATUS_FAILED);
+                        }
+                        break;
+                    case Message.FILE_STATUS_FAILED:
+                        call = call.clone();
+                        call.enqueue(callback);
+                        setStatus(Message.FILE_STATUS_LOADING);
+                        //TODO: enqueue
+                        break;
+                    case Message.FILE_STATUS_LOADED:
+                        try {
+                            Intent intent = new Intent(Intent.ACTION_VIEW);
+                            intent.setDataAndType(Uri.parse(mItem.fileUri), Utils.getMimeType(mItem.filePath));
+                            intent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+                            mContext.startActivity(intent);
+                        } catch (Exception e) {
+                            Toaster.toast(mContext.getString(R.string.error_in_opening_file) + e.getMessage());
+                        }
+                        break;
                 }
             });
         }
@@ -364,16 +366,18 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
                             if (response.isSuccessful()){
                                 Log.d("***", "success");
                                 setStatus(Message.FILE_STATUS_LOADED);
-                                XmppHelper.getInstance().sendFileMessage(mItem, response.body().key +
-                                        Constants.MESSAGE_FILE_INDEX_PREFIX + mItem.fileName);
-                                return;
+                                XmppHelper.getInstance().sendFileMessagerx(mItem, response.body().key +
+                                        Constants.MESSAGE_FILE_INDEX_PREFIX + mItem.fileName)
+                                        .subscribeOn(Schedulers.newThread())
+                                        .observeOn(AndroidSchedulers.mainThread())
+                                        .subscribe(aBoolean -> {},
+                                        throwable -> {
+                                            Toaster.toast("An error during sending file " + mItem.fileName );
+                                            Log.d("***", "onSuccess " + new Gson().toJson(response.errorBody()));
+                                            setStatus(Message.FILE_STATUS_FAILED);
+                                        });
                             }
                         }
-
-                        Toaster.toast("An error during sending file " + mItem.fileName );
-                        Log.d("***", "onSuccess " + new Gson().toJson(response.errorBody()));
-                        setStatus(Message.FILE_STATUS_FAILED);
-
                     }
 
                     @Override

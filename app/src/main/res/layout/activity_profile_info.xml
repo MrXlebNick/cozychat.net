@@ -1,103 +1,220 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
     android:orientation="vertical"
+            android:padding="16dp"
     tools:context="com.messiah.messenger.fragment.ProfileInfoFragment">
-
-    <android.support.design.widget.FloatingActionButton
-        android:id="@+id/fab"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:backgroundTint="@color/colorPrimary"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentRight="true"
-        app:srcCompat="@drawable/ic_edit_white_24dp" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:theme="@style/AppTheme.AppBarOverlay"
-        android:layout_above="@id/fab"
-        android:background="?attr/colorPrimary"
-        android:layout_marginBottom="68dp"
-        />
-    <android.support.v7.widget.LinearLayoutCompat
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/content_card"
-        android:orientation="vertical"
-        android:layout_marginLeft="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginRight="16dp"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        android:layout_above="@+id/fab">
-        <TextView
+        android:orientation="vertical">
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#FFF"
-            android:textSize="28sp"
-            android:padding="4dp"
-            android:textStyle="bold"
-            android:text="Secret Spy"
-            android:id="@+id/name"
-            android:textAppearance="?android:attr/textAppearanceLarge"/>
-        <android.support.v7.widget.CardView
+            android:orientation="horizontal">
+            <com.makeramen.roundedimageview.RoundedImageView
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:src="@drawable/default_avatar"
+                android:id="@+id/avatar"
+                app:riv_oval="true"
+                />
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingTop="16dp">
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="#222"
+                        android:textSize="18sp"
+                        android:text="\@"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/nickname"
+                        android:textColor="#222"
+                        android:textSize="18sp"
+                        android:text="NickName"/>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/phone_number"
+                    android:text="+78347834783"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#FFF"
-            android:padding="8dp">
-            <LinearLayout
+            android:orientation="horizontal">
+            <RadioGroup
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:orientation="horizontal"
+                android:id="@+id/gender">
+                <RadioButton
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Male"
+                    android:id="@+id/male"
+                    />
+                <RadioButton
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Female"
+                    android:id="@+id/female"
+                    />
+            </RadioGroup>
+        </LinearLayout>
+        <TableLayout
 
-                <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-                    android:orientation="horizontal" android:layout_width="match_parent"
-                    android:gravity="center_vertical"
-                    android:layout_height="match_parent">
-                    <ImageView
-                        android:layout_width="64dp"
-                        android:layout_height="64dp"
-                        app:srcCompat="@drawable/ic_phone_black_36dp"
-                        android:padding="14dp"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textAppearance="?attr/textAppearanceListItem"
-                        android:text="Not specified"
-                        android:id="@+id/phone"/>
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:stretchColumns="1">
+            <TableRow
+                android:padding="4dp">
+                <TextView
+                    android:text="Full name"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginRight="4dp"/>
+                <EditText
+                    android:id="@+id/name"/>
+            </TableRow>
+            <TableRow
+                android:padding="4dp">
+                <TextView
+                    android:text="Date"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginRight="4dp"/>
+                <EditText
+                    android:id="@+id/date"
+                    android:inputType="date"/>
+            </TableRow>
+            <TableRow
+                android:padding="4dp">
+                <TextView
+                    android:text="Region"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginRight="4dp"/>
+                <EditText
+                    android:id="@+id/region"/>
+            </TableRow>
+            <TableRow
+                android:padding="4dp">
+                <TextView
+                    android:text="Country"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginRight="4dp"/>
+                <EditText
+                    android:id="@+id/country"/>
+            </TableRow>
+            <TableRow
+                android:padding="4dp">
+                <TextView
+                    android:text="Place"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginRight="4dp"/>
+                <EditText
+                    android:id="@+id/place"/>
+            </TableRow>
+            <TableRow
+                android:padding="4dp">
+                <TextView
+                    android:text="Native place"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginRight="4dp"/>
+                <EditText
+                    android:id="@+id/native_place"/>
+            </TableRow>
+            <TableRow
+                android:padding="4dp">
+                <TextView
+                    android:text="Languages"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginRight="4dp"/>
+                <EditText
+                    android:id="@+id/languages"/>
+            </TableRow>
+            <TableRow
+                android:padding="4dp">
+                <TextView
+                    android:text="Education (school)"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginRight="4dp"/>
+                <EditText
+                    android:id="@+id/education1"/>
+            </TableRow>
+            <TableRow
+                android:padding="4dp">
+                <TextView
+                    android:text="Education (higher)"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginRight="4dp"/>
+                <EditText
+                    android:id="@+id/education2"/>
+            </TableRow>
+            <TableRow
+                android:padding="4dp">
+                <TextView
+                    android:text="Website"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginRight="4dp"/>
+                <EditText
+                    android:id="@+id/website"/>
+            </TableRow>
+            <TableRow
+                android:padding="4dp">
+                <TextView
+                    android:text="Email"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginRight="4dp"/>
+                <EditText
+                    android:id="@+id/email"/>
+            </TableRow>
+            <TableRow
+                android:padding="4dp">
+                <TextView
+                    android:text="Phone (home)"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginRight="4dp"/>
+                <EditText
+                    android:id="@+id/phone1"/>
+            </TableRow>
+            <TableRow
+                android:padding="4dp">
+                <TextView
+                    android:text="Phone (cell)"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginRight="4dp"/>
+                <EditText
+                    android:id="@+id/phone2"/>
+            </TableRow>
+            <TableRow
+                android:padding="4dp">
+                <TextView
+                    android:text="Phone (office)"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginRight="4dp"/>
+                <EditText
+                    android:id="@+id/phone3"/>
+            </TableRow>
+        </TableLayout>
+    </LinearLayout>
 
-                </LinearLayout>
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="#9999"
-                    android:layout_marginLeft="64dp"/>
-                <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-                    android:orientation="horizontal" android:layout_width="match_parent"
-                    android:gravity="center_vertical"
-                    android:layout_height="match_parent">
-                    <ImageView
-                        android:layout_width="64dp"
-                        android:layout_height="64dp"
-                        app:srcCompat="@drawable/ic_mail_black_36dp"
-                        android:padding="14dp"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textAppearance="?attr/textAppearanceListItem"
-                        android:text="Not specified"
-                        android:id="@+id/email"/>
 
-                </LinearLayout>
-            </LinearLayout>
 
-        </android.support.v7.widget.CardView>
-    </android.support.v7.widget.LinearLayoutCompat>
-</RelativeLayout>
+</ScrollView>

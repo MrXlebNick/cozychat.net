@@ -24,6 +24,7 @@ import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -34,11 +35,13 @@ import com.messiah.messenger.fragment.MessageFragment;
 import com.messiah.messenger.fragment.ProfileInfoFragment;
 import com.messiah.messenger.fragment.UserListFragment;
 import com.messiah.messenger.helpers.SipHelper;
+import com.messiah.messenger.helpers.XmppHelper;
 import com.messiah.messenger.model.User;
-import com.messiah.messenger.service.ListenForMessagesService;
+import com.messiah.messenger.service.XmppService;
 import com.messiah.messenger.service.PjsipService;
 import com.messiah.messenger.service.RegistrationIntentService;
 import com.messiah.messenger.utils.Utils;
+import com.squareup.picasso.Picasso;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -54,6 +57,7 @@ import io.github.rockerhieu.emojicon.EmojiconGridFragment;
 import io.github.rockerhieu.emojicon.EmojiconsFragment;
 import io.github.rockerhieu.emojicon.emoji.Emojicon;
 import io.github.rockerhieu.emojiconize.Emojiconize;
+import io.reactivex.android.schedulers.AndroidSchedulers;
 import xdroid.toaster.Toaster;
 
 
@@ -81,20 +85,23 @@ public class MainActivity extends AppCompatActivity
             finish();
         }
 
+        if (TextUtils.isEmpty(Utils.getPhoneNumber(this))){
+            Intent intent = new Intent(this, LoginSignupActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK |
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP |
+                    Intent.FLAG_ACTIVITY_NO_HISTORY);
+            startActivity(intent);
+            return;
+        }
+
         startService(new Intent(this, PjsipService.class));
 
-        Log.d("***", SipManager.isVoipSupported(this)  + " " + SipManager.isApiSupported(this));
-        if (!SipManager.isVoipSupported(this)  || !SipManager.isApiSupported(this)){
-            Toaster.toast("SIP protocol is not supported on the device; calls are unavailable");
-        }
         SipHelper.getInstance().register();
         setContentView(R.layout.activity_template);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setTitle(R.string.app_name);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
-
-
 
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -115,10 +122,33 @@ public class MainActivity extends AppCompatActivity
         fragmentTransaction.replace(R.id.fragmnet_container, new DialogListFragment());
         fragmentTransaction.commit();
 
-        ((TextView) ((NavigationView) findViewById(R.id.nav_view)).getHeaderView(0).findViewById(R.id.textView)).setText(Utils.getPhoneNumber(this));
+        ((TextView) ((NavigationView) findViewById(R.id.nav_view)).getHeaderView(0)
+                .findViewById(R.id.text_phone)).setText(Utils.getPhoneNumber(this));
 
-        startService(new Intent(this, ListenForMessagesService.class));
+        startService(new Intent(this, XmppService.class));
         startService(new Intent(this, RegistrationIntentService.class));
+
+
+        XmppHelper.getInstance().getUserPropertiesrx()
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(properties -> {
+                    ((TextView) ((NavigationView) findViewById(R.id.nav_view)).getHeaderView(0)
+                            .findViewById(R.id.text_phone)).setText(Utils.getPhoneNumber(this));
+
+                    ((TextView) ((NavigationView) findViewById(R.id.nav_view)).getHeaderView(0)
+                            .findViewById(R.id.text_name)).setText(!TextUtils.isEmpty(properties.get("niknam")) ? properties.get("niknam") : "");
+
+                    if (!TextUtils.isEmpty(properties.get("avatarKey")) && !TextUtils.isEmpty(properties.get("avatarFileName"))) {
+                        Picasso.with(MainActivity.this)
+                                .load("http://ec2-18-216-77-83.us-east-2.compute.amazonaws.com:8080/" +
+                                        properties.get("avatarKey"))
+                                .fit()
+                                .centerCrop()
+                                .into(((ImageView) ((NavigationView) findViewById(R.id.nav_view)).getHeaderView(0)
+                                        .findViewById(R.id.imageView)));
+
+                    }
+                }, Throwable::printStackTrace);
 
         if (!TextUtils.isEmpty(getIntent().getStringExtra(Utils.FROM_PHONE))) {
             fragmentTransaction = getSupportFragmentManager().beginTransaction();

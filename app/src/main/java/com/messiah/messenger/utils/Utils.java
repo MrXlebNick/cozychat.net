@@ -7,9 +7,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.media.AudioManager;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.os.Vibrator;
 import android.provider.ContactsContract;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
@@ -19,6 +22,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
 
+import com.messiah.messenger.CozyChatApplication;
 import com.messiah.messenger.R;
 import com.messiah.messenger.activity.MainActivity;
 import com.messiah.messenger.model.Message;
@@ -90,15 +94,25 @@ public class Utils {
                 "SELECT * FROM Message WHERE read = 0 ORDER BY time");
         Log.d("***", "notif " + unreadMessages.size());
 
+        AudioManager audioManager = (AudioManager)CozyChatApplication.getContext().getSystemService(Context.AUDIO_SERVICE);
+        float volume = ((float) audioManager.getStreamVolume(AudioManager.STREAM_NOTIFICATION)) /
+                audioManager.getStreamVolume(AudioManager.STREAM_NOTIFICATION);
+        MediaPlayer mediaPlayer = MediaPlayer.create(CozyChatApplication.getContext(), R.raw.notif);
+        mediaPlayer.setVolume(volume, volume);
+        mediaPlayer.start();
+
+        if (audioManager.getRingerMode() != AudioManager.RINGER_MODE_SILENT){
+            Vibrator v = (Vibrator) CozyChatApplication.getContext().getSystemService(Context.VIBRATOR_SERVICE);
+            v.vibrate(250   );
+        }
+
         String title = "";
         String content = "";
-        Log.d("***", unreadMessages.size() + " count");
         if (unreadMessages.size() == 0) {
             Log.d("***", " 0");
-
             return;
         } else if (unreadMessages.size() == 1) {
-            Log.d("***", " 2");
+            Log.d("***", " 1");
             List<User> user = User.find(User.class, "m_phone_number = ?", unreadMessages.get(0).sender);
             title = user.size() == 0 ? unreadMessages.get(0).sender : user.get(0).mFullName;
             content = unreadMessages.get(0).body;
@@ -127,6 +141,7 @@ public class Utils {
                         .setContentTitle(title)
                         .setAutoCancel(true)
                         .setContentText(content);
+
         Intent resultIntent = new Intent(context, MainActivity.class);
         if (unreadMessages.size() == 1) {
             resultIntent.putExtra(FROM_PHONE, unreadMessages.get(0).sender);
@@ -142,8 +157,8 @@ public class Utils {
         mBuilder.setDefaults(NotificationCompat.DEFAULT_ALL);
         NotificationManager mNotificationManager =
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-
-        mNotificationManager.notify(notificationCounter++, mBuilder.build());
+        notificationCounter++;
+        mNotificationManager.notify(1616, mBuilder.build());
 
     }
 

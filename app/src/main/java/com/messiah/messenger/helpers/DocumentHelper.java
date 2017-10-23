@@ -222,4 +222,68 @@ public class DocumentHelper {
         }
     }
 
+    public static File createOrOpenOmemoFile() throws IOException {
+
+        File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "omemoFile");
+        file.delete();
+        Log.d("***", "new file is here" + file.getAbsolutePath());
+        if (!file.exists()){
+            file.mkdirs();
+        }
+        return file;
+    }
+
+    public static File writeResponseBodyToDisk(ResponseBody body, String fileName) {
+        try {
+            // todo change the file location/name according to your needs
+            File futureStudioIconFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + fileName);
+            Log.d("***", "new file is here" + futureStudioIconFile.getAbsolutePath());
+            if (!futureStudioIconFile.exists()){
+                futureStudioIconFile.createNewFile();
+            }
+
+            InputStream inputStream = null;
+            OutputStream outputStream = null;
+
+            try {
+                byte[] fileReader = new byte[4096];
+
+
+                inputStream = body.byteStream();
+                outputStream = new FileOutputStream(futureStudioIconFile);
+
+                while (true) {
+                    int read = inputStream.read(fileReader);
+
+                    if (read == -1) {
+                        break;
+                    }
+
+                    outputStream.write(fileReader, 0, read);
+
+
+//                    Log.d(TAG, "file download: " + fileSizeDownloaded + " of " + fileSize);
+                }
+
+                outputStream.flush();
+
+                return futureStudioIconFile;
+            } catch (IOException e) {
+                e.printStackTrace();
+                return null;
+            } finally {
+                if (inputStream != null) {
+                    inputStream.close();
+                }
+
+                if (outputStream != null) {
+                    outputStream.close();
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
 }

@@ -12,6 +12,7 @@ import android.net.sip.SipManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -21,7 +22,9 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.Selection;
+import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.AndroidException;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.Display;
@@ -44,6 +47,7 @@ import com.github.rahatarmanahmed.cpv.CircularProgressView;
 import com.messiah.messenger.Constants;
 import com.messiah.messenger.R;
 import com.messiah.messenger.activity.DialActivity;
+import com.messiah.messenger.activity.MainActivity;
 import com.messiah.messenger.adapter.MessageAdapter;
 import com.messiah.messenger.helpers.DocumentHelper;
 import com.messiah.messenger.helpers.XmppHelper;
@@ -51,7 +55,10 @@ import com.messiah.messenger.model.Message;
 import com.messiah.messenger.model.User;
 import com.messiah.messenger.service.PjsipService;
 import com.messiah.messenger.utils.Utils;
+import com.squareup.picasso.Picasso;
 
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPException;
 
@@ -67,11 +74,13 @@ import io.github.rockerhieu.emojicon.EmojiconEditText;
 import io.github.rockerhieu.emojicon.EmojiconGridFragment;
 import io.github.rockerhieu.emojicon.EmojiconGridView;
 import io.github.rockerhieu.emojicon.emoji.Emojicon;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
 import xdroid.toaster.Toaster;
 
 import static android.app.Activity.RESULT_OK;
 
-public class MessageFragment extends LoadableFragment implements Observer {
+public class MessageFragment extends LoadableFragment  {
 
     public final static int FILE_PICK = 1001;
     private static final int PICK_IMAGE = 1;
@@ -142,7 +151,7 @@ public class MessageFragment extends LoadableFragment implements Observer {
                 message.save();
                 onLoadStart();
 //
-//                FileManager fileManager = new Retrofit.Builder().baseUrl("http://http://ec2-35-162-177-84.us-west-2.compute.amazonaws.com:8080")
+//                FileManager fileManager = new Retrofit.Builder().baseUrl("http://http://ec2-18-216-77-83.us-east-2.compute.amazonaws.com:8080")
 //                        .build().create(FileManager.class);
 //                File file = new File(filePath);
 //
@@ -206,11 +215,6 @@ public class MessageFragment extends LoadableFragment implements Observer {
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -230,59 +234,50 @@ public class MessageFragment extends LoadableFragment implements Observer {
 
         final EmojiconGridView emojiconsView = (EmojiconGridView) view.findViewById(R.id.emojicons_view);
         emojiconsView.setEmojiData(Emojicon.TYPE_PEOPLE, null, false);
-        emojiconsView.setOnEmojiconClickedListener(new EmojiconGridFragment.OnEmojiconClickedListener() {
-            @Override
-            public void onEmojiconClicked(Emojicon emojicon) {
-                editText.setText(editText.getText() + emojicon.getEmoji());
-                int position = editText.length();
-                Editable etext = editText.getText();
-                Selection.setSelection(etext, position);
-            }
+        emojiconsView.setOnEmojiconClickedListener(emojicon -> {
+            editText.setText(editText.getText() + emojicon.getEmoji());
+            int position = editText.length();
+            Editable etext = editText.getText();
+            Selection.setSelection(etext, position);
         });
 
         Display display = getActivity().getWindowManager().getDefaultDisplay();
         final int stageWidth = (int) (display.getWidth() / 1.25);
-        btnEmoji.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (emojiconsView.getVisibility() == View.VISIBLE) {
-                    btnEmoji.setImageResource(R.drawable.ic_insert_emoticon_black_24dp);
-                    RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                    lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
-                    view.findViewById(R.id.new_message_block).setLayoutParams(lp);
-                    emojiconsView.setVisibility(View.GONE);
-                    (new Handler()).postDelayed(new Runnable() {
+        btnEmoji.setOnClickListener(v -> {
+            if (emojiconsView.getVisibility() == View.VISIBLE) {
+                btnEmoji.setImageResource(R.drawable.ic_insert_emoticon_black_24dp);
+                RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+                view.findViewById(R.id.new_message_block).setLayoutParams(lp);
+                emojiconsView.setVisibility(View.GONE);
+                (new Handler()).postDelayed(() -> {
 
-                        public void run() {
+                    editText.dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(), SystemClock.uptimeMillis(), MotionEvent.ACTION_DOWN, 0, 0, 0));
+                    editText.dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(), SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, 0, 0, 0));
 
-                            editText.dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(), SystemClock.uptimeMillis(), MotionEvent.ACTION_DOWN, 0, 0, 0));
-                            editText.dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(), SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, 0, 0, 0));
+                    int position = editText.length();
+                    Editable etext = editText.getText();
+                    Selection.setSelection(etext, position);
 
-                            int position = editText.length();
-                            Editable etext = editText.getText();
-                            Selection.setSelection(etext, position);
+                }, 200);
 
-                        }
-                    }, 200);
+            } else {
+                btnEmoji.setImageResource(R.drawable.ic_keyboard_black_24dp);
+                emojiconsView.setVisibility(View.VISIBLE);
+                emojiconsView.getLayoutParams().width = stageWidth;
 
-                } else {
-                    btnEmoji.setImageResource(R.drawable.ic_keyboard_black_24dp);
-                    emojiconsView.setVisibility(View.VISIBLE);
-                    emojiconsView.getLayoutParams().width = stageWidth;
+                RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                lp.addRule(RelativeLayout.ABOVE, emojiconsView.getId());
 
-                    RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                    lp.addRule(RelativeLayout.ABOVE, emojiconsView.getId());
+                lp.bottomMargin = 67;
+                InputMethodManager imm = (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
 
-                    lp.bottomMargin = 67;
-                    InputMethodManager imm = (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-                    imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
-
-                    view.findViewById(R.id.new_message_block).setLayoutParams(lp);
-
-                }
-
+                view.findViewById(R.id.new_message_block).setLayoutParams(lp);
 
             }
+
+
         });
 
         final ImageView btnSend = (ImageView) view.findViewById(R.id.btn_send);
@@ -310,73 +305,60 @@ public class MessageFragment extends LoadableFragment implements Observer {
 
             }
         });
-        btnSend.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (isNewMesageEmpty) {
-                    Toaster.toast(R.string.enter_something_first);
-                    return;
-                }
-
-                new AsyncTask<Void, Void, Void>() {
-                    @Override
-                    protected Void doInBackground(Void... params) {
-
-                        return null;
-                    }
-                }.execute();
-                new AsyncTask<String, Void, Void>() {
-
-                    @Override
-                    protected void onPreExecute() {
-                        super.onPreExecute();
-                        btnSend.setVisibility(View.INVISIBLE);
-                        sendProgressBar.setVisibility(View.VISIBLE);
-                        sendProgressBar.setProgress(0);
-                        sendProgressBar.setIndeterminate(true);
-                    }
-
-                    @Override
-                    protected Void doInBackground(String... params) {
-                        try {
-                            XmppHelper.getInstance(mPhoneNumber)
-                                    .sendMessage(mPhoneNumber,
-                                            URLEncoder.encode(params[0], "utf-8"));
-                        } catch (UnsupportedEncodingException e) {
-                            e.printStackTrace();
-                        }
-
-                        return null;
-                    }
-
-                    @Override
-                    protected void onPostExecute(Void aVoid) {
-                        messages = getMessagesFromDb();
-                        btnSend.setColorFilter(Color.GRAY);
-                        btnSend.setVisibility(View.VISIBLE);
-                        sendProgressBar.setVisibility(View.GONE);
-                        ((MessageAdapter) recyclerView.getAdapter()).setValues(messages);
-                        editText.setText("");
-                        recyclerView.scrollBy(5, 5);
-                        mediaPlayer.start();
-                        super.onPostExecute(aVoid);
-                    }
-                }.execute(editText.getText().toString());
-                isNewMesageEmpty = true;
+        btnSend.setOnClickListener(v -> {
+            if (isNewMesageEmpty) {
+                Toaster.toast(R.string.enter_something_first);
+                return;
             }
+
+            btnSend.setVisibility(View.INVISIBLE);
+            sendProgressBar.setVisibility(View.VISIBLE);
+            sendProgressBar.setProgress(0);
+            sendProgressBar.setIndeterminate(true);
+
+            try {
+                XmppHelper.getInstance(mPhoneNumber)
+                        .sendMessagerx(mPhoneNumber,
+                                URLEncoder.encode(editText.getText().toString(), "utf-8"))
+                        .subscribeOn(Schedulers.newThread())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(newMessage -> {
+
+                                getActivity().runOnUiThread(() -> {
+                                    messages.add(0, newMessage);
+                                    ((MessageAdapter) recyclerView.getAdapter()).setValues(messages);
+                                });
+
+                                mediaPlayer.start();
+                            },
+                            throwable -> {
+                                throwable.printStackTrace();
+                                Toaster.toast("Message was not sent: " + throwable.getMessage());
+                                btnSend.setColorFilter(Color.GRAY);
+                                btnSend.setVisibility(View.VISIBLE);
+                                sendProgressBar.setVisibility(View.GONE);
+                                editText.setText("");
+                            }, () -> {
+                                btnSend.setColorFilter(Color.GRAY);
+                                btnSend.setVisibility(View.VISIBLE);
+                                sendProgressBar.setVisibility(View.GONE);
+                                editText.setText("");
+                                recyclerView.scrollBy(5, 5);
+                            });
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
+
+            isNewMesageEmpty = true;
         });
 
         final View btnAttach = view.findViewById(R.id.btn_attach);
-        btnAttach.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                btnAttach.performLongClick();
-            }
-        });
+        btnAttach.setOnClickListener(v -> btnAttach.performLongClick());
         registerForContextMenu(btnAttach);
 
         return super.onCreateView(inflater, container, savedInstanceState, view);
     }
+
 
     private List<Message> getMessagesFromDb() {
         List<Message> messages =  Message.findWithQuery(Message.class,
@@ -393,7 +375,7 @@ public class MessageFragment extends LoadableFragment implements Observer {
 
     @Override
     public void onStop() {
-        XmppHelper.getInstance().deleteObserver(this);
+        EventBus.getDefault().unregister(this);
         isActive = false;
         super.onStop();
     }
@@ -494,7 +476,7 @@ public class MessageFragment extends LoadableFragment implements Observer {
         List<Message> messages = Message.findWithQuery(Message.class,
                 "SELECT * FROM Message WHERE (sender = ? OR receiver = ?) AND read = 0  ORDER BY time DESC",
                 mPhoneNumber, mPhoneNumber);
-        ;
+
         for (Message message : messages) {
             message.read = true;
             message.update();
@@ -502,24 +484,12 @@ public class MessageFragment extends LoadableFragment implements Observer {
 
     }
 
-    @Override
-    public void update(Observable o, Object arg) {
+    @Subscribe
+    public void update(Message message) {
 
         Log.d("***", "DialogListFragment got the message");
         if (isActive) {
-
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    mediaPlayer.start();
-                }
-            }).start();
-            getActivity().runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    load();
-                }
-            });
+            getActivity().runOnUiThread(this::load);
         }
     }
 
@@ -527,7 +497,7 @@ public class MessageFragment extends LoadableFragment implements Observer {
     public void onStart() {
         super.onStart();
         isActive = true;
-        XmppHelper.getInstance().addObserver(this);
+        EventBus.getDefault().register(this);
     }
 
     @Override
@@ -537,51 +507,59 @@ public class MessageFragment extends LoadableFragment implements Observer {
             mPhoneNumber = getArguments().getString(ARG_PHONE_NUMBER);
             mSipNumber = getArguments().getString(ARG_SIP_NUMBER);
             Log.d("sipka", mSipNumber + "1");
-            try {
-                HashMap<String, String> properties = XmppHelper.getInstance().getUserProperties(mPhoneNumber);
+
+            XmppHelper.getInstance()
+                    .getUserPropertiesrx(mPhoneNumber)
+                    .subscribeOn(Schedulers.newThread())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(properties -> {
                 mSipNumber = properties.get("sip");
                 Log.d("sipka", mSipNumber + "2");
-            } catch (SmackException.NotConnectedException | XMPPException.XMPPErrorException | SmackException.NoResponseException e) {
-                e.printStackTrace();
-            }
-            try {
+                try {
 
-                List<User> user = User.find(User.class, "m_phone_number = ?", mPhoneNumber);
-                opponent = user.size() == 0 ? "Secret Spy" : user.get(0).mFullName;
-                ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle(opponent);
-            } catch (Exception ignored) {}
+                    List<User> user = User.find(User.class, "m_phone_number = ?", mPhoneNumber);
+                    opponent = user.size() == 0 ? (TextUtils.isEmpty(properties.get("niknam")) ? "Secret Spy" : properties.get("niknam")) : user.get(0).mFullName;
+                    ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle(opponent);
+
+                    Picasso.with(getContext())
+                            .load("http://ec2-18-216-77-83.us-east-2.compute.amazonaws.com:8080/" +
+                                    properties.get("avatarKey"))
+                            .fit()
+                            .centerCrop()
+                            .into((ImageView) getActivity().findViewById(R.id.avatar));
+
+                } catch (Exception ignored) {}
+            });
+
+
         }
-
 
         markAllAsRead();
         messages = getMessagesFromDb();
 
         if (getActivity() != null) {
-            getActivity().runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    ((MessageAdapter) recyclerView.getAdapter()).setValues(messages);
-                    ((MessageAdapter) recyclerView.getAdapter()).setOpponent(opponent);
-                    recyclerView.scrollToPosition(recyclerView.getAdapter().getItemCount());
-                    recyclerView.scrollBy(5, 5);
-                    Utils.dismissNotifications(getContext());
-                }
+            getActivity().runOnUiThread(() -> {
+                ((MessageAdapter) recyclerView.getAdapter()).setValues(messages);
+                ((MessageAdapter) recyclerView.getAdapter()).setOpponent(opponent);
+                recyclerView.scrollToPosition(recyclerView.getAdapter().getItemCount());
+                recyclerView.scrollBy(5, 5);
+                Utils.dismissNotifications(getContext());
             });
 
         }
-        receiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
+//        receiver = new BroadcastReceiver() {
+//            @Override
+//            public void onReceive(Context context, Intent intent) {
+////
+////                markAllAsRead();
+////                messages = getMessagesFromDb();
+////                ((MessageAdapter) recyclerView.getAdapter()).setValues(messages);
 //
-//                markAllAsRead();
-//                messages = getMessagesFromDb();
-//                ((MessageAdapter) recyclerView.getAdapter()).setValues(messages);
-
-            }
-        };
-        LocalBroadcastManager.getInstance(getContext()).registerReceiver((receiver),
-                new IntentFilter(XmppHelper.MESSAGE_RECEIVED)
-        );
+//            }
+//        };
+//        LocalBroadcastManager.getInstance(getContext()).registerReceiver((receiver),
+//                new IntentFilter(XmppHelper.MESSAGE_RECEIVED)
+//        );
 
 
         onLoaded();

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Messiah</string>
+    <string name="app_name">Messia</string>
 
     <!-- Strings related to login -->
     <string name="prompt_email" translatable="false">Email</string>
@@ -55,5 +55,8 @@
     <string name="already_have_account">Already have an account</string>
     <string name="error_login_too_short">Login too short</string>
     <string name="error_passwords_dont_match">Passwords don\'t match</string>
+    <string name="send_code">Send code</string>
+    <string name="hint_code">Code</string>
+    <string name="wrong_number">Wrong number?</string>
 
 </resources>

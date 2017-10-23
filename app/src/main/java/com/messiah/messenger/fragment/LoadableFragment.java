@@ -29,14 +29,8 @@ public abstract class LoadableFragment extends Fragment {
         contentContainer = (LinearLayout) view.findViewById(R.id.loadable_fragment_content_container);
         emptyDataset = (TextView) view.findViewById(R.id.empty_dataset);
         View retryButton = view.findViewById(R.id.loadable_fragment_retry);
-        retryButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                load();
-            }
-        });
+        retryButton.setOnClickListener(v -> load());
 
-        load();
         contentContainer.addView(content);
         return view;
     }
@@ -54,6 +48,7 @@ public abstract class LoadableFragment extends Fragment {
     @Override
     public void onStart() {
         super.onStart();
+        load();
     }
 
     public void onLoaded() {
