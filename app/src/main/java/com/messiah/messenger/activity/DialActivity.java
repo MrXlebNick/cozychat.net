@@ -12,6 +12,7 @@ import android.os.PowerManager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -238,17 +239,14 @@ public class DialActivity extends AppCompatActivity {
                     pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED.swigValue()) {
                 if (ci.getRole() == pjsip_role_e.PJSIP_ROLE_UAS) {
                     updateStatus("Incoming call..");
-		/* Default button texts are already 'Accept' & 'Reject' */
                 } else {
                     updateStatus(ci.getStateText().equalsIgnoreCase("EARLY") ?  "Ringing..." : ci.getStateText());
                 }
-            } else if (ci.getState().swigValue() >=
-                    pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED.swigValue()) {
+            } else if (ci.getState().swigValue() >= pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED.swigValue()) {
                 updateStatus(ci.getStateText().equalsIgnoreCase("EARLY") ?  "Ringing..." : ci.getStateText());
                 if (ci.getState() == pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED) {
                     showCall();
-                } else if (ci.getState() ==
-                        pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED) {
+                } else if (ci.getState() == pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED) {
                     endCall();
                     updateStatus("Call disconnected: " + ci.getLastReason());
                 }
@@ -293,7 +291,6 @@ public class DialActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         try {
-
             PjsipService.currentCall.delete();
         } catch (Exception e){
             e.printStackTrace();
@@ -443,6 +440,14 @@ public class DialActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         EventBus.getDefault().register(this);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON|
+                WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD|
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED|
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+        PowerManager.WakeLock wl = ((PowerManager)getSystemService(POWER_SERVICE))
+                .newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "tag");
+        wl.acquire();
+
     }
 
     @Override

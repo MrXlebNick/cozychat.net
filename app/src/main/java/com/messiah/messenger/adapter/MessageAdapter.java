@@ -68,7 +68,7 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
     public MessageAdapter(Context context) {
 //        XmppHelper.getInstance(context).setFileListener(this);
         mContext = context;
-        retrofit = new Retrofit.Builder().baseUrl("http://ec2-18-216-77-83.us-east-2.compute.amazonaws.com:8080")
+        retrofit = new Retrofit.Builder().baseUrl("http://ec2-35-162-177-84.us-west-2.compute.amazonaws.com:8080")
                 .addConverterFactory(GsonConverterFactory.create())
                 .build().create(FileIOApi.class);
     }

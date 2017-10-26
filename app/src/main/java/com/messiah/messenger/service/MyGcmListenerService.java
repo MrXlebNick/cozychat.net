@@ -23,11 +23,13 @@ public class MyGcmListenerService extends GcmListenerService {
     public void onMessageReceived(String s, Bundle bundle) {
         super.onMessageReceived(s, bundle);
         Log.d("***", "GCM message received " + bundle.getString("message"));
-//        try {
-//            XmppHelper.getInstance().newIncomingMessage(null, ((Message) PacketParserUtils.parseStanza(bundle.getString("message"))));
-//        } catch (XmlPullParserException | IOException | SmackException e) {
-//            e.printStackTrace();
-//        }
+        try {
+            XmppHelper.getInstance().newIncomingMessage(null, PacketParserUtils.parseStanza(bundle.getString("message")), null);
+        } catch (XmlPullParserException | IOException | SmackException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+
+        }
         startService(new Intent(this, XmppService.class));
     }
 }

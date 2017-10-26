@@ -45,18 +45,18 @@
     <string name="select_file">Select a File</string>
     <string name="contacts">Contacts</string>
     <string name="dialogs">Chats</string>
-    <string name="missing_call">Missing call</string>
-    <string name="title_activity_login_signup">Sign in</string>
-    <string name="prompt_login">Nickname</string>
-    <string name="repeat_password">Repeat password</string>
-    <string name="no_account_yet">No account yet?</string>
-    <string name="forgot_password">Forgot password?</string>
-    <string name="sign_up">Sign up</string>
-    <string name="already_have_account">Already have an account</string>
-    <string name="error_login_too_short">Login too short</string>
-    <string name="error_passwords_dont_match">Passwords don\'t match</string>
-    <string name="send_code">Send code</string>
-    <string name="hint_code">Code</string>
-    <string name="wrong_number">Wrong number?</string>
+    <string name="missing_call" translatable="false">Missing call</string>
+    <string name="title_activity_login_signup" translatable="false">Sign in</string>
+    <string name="prompt_login" translatable="false">Nickname</string>
+    <string name="repeat_password" translatable="false">Repeat password</string>
+    <string name="no_account_yet" translatable="false">No account yet?</string>
+    <string name="forgot_password" translatable="false">Forgot password?</string>
+    <string name="sign_up" translatable="false">Sign up</string>
+    <string name="already_have_account" translatable="false">Already have an account</string>
+    <string name="error_login_too_short" translatable="false">Login too short</string>
+    <string name="error_passwords_dont_match" translatable="false">Passwords don\'t match</string>
+    <string name="send_code" translatable="false">Send code</string>
+    <string name="hint_code" translatable="false">Code</string>
+    <string name="wrong_number" translatable="false">Wrong number?</string>
 
 </resources>

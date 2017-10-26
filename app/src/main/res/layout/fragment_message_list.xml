@@ -63,7 +63,7 @@
         <io.github.rockerhieu.emojicon.EmojiconEditText
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Enter your message right here"
+            android:hint="Enter your message here"
             android:id="@+id/edit_text"
             android:layout_centerVertical="true"
             android:layout_toLeftOf="@+id/btn_show_emoji"

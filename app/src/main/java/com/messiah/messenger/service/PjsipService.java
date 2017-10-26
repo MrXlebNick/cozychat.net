@@ -117,7 +117,6 @@ public class PjsipService extends Service implements MyAppObserver {
                 e.printStackTrace();
             }
             try {
-
                 call.delete();
             } catch (Exception e){
                 e.printStackTrace();

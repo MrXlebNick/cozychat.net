@@ -140,7 +140,7 @@ public class MainActivity extends AppCompatActivity
 
                     if (!TextUtils.isEmpty(properties.get("avatarKey")) && !TextUtils.isEmpty(properties.get("avatarFileName"))) {
                         Picasso.with(MainActivity.this)
-                                .load("http://ec2-18-216-77-83.us-east-2.compute.amazonaws.com:8080/" +
+                                .load("http://ec2-35-162-177-84.us-west-2.compute.amazonaws.com:8080/" +
                                         properties.get("avatarKey"))
                                 .fit()
                                 .centerCrop()
@@ -332,6 +332,7 @@ public class MainActivity extends AppCompatActivity
         fragmentTransaction.addToBackStack(null);
         fragmentTransaction.commit();
 
+
     }
 
     @Override
@@ -341,6 +342,19 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onEmojiconBackspaceClicked(View v) {
+
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        ActivityCompat.requestPermissions(this, new String[]{
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                "android.permission.USE_SIP",
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.VIBRATE,
+                Manifest.permission.READ_CONTACTS}, 103);
 
     }
 }

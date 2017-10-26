@@ -26,7 +26,7 @@ public class Constants {
     public static final String MESSAGE_TYPE_CALL = "file";
     public static final String MESSAGE_TYPE_FILE = "file";
     public static final String MESSAGE_TYPE_TEXT = "text";
-    public static final String SIP_SERVER_HOSTNAME = "ec2-18-216-77-83.us-east-2.compute.amazonaws.com";
+    public static final String SIP_SERVER_HOSTNAME = "ec2-35-162-177-84.us-west-2.compute.amazonaws.com";
     public static final String SIP_SERVER_ADDRESS = "35.162.177.84";
 
 

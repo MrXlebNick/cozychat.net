@@ -139,6 +139,11 @@ public class LoginSignupActivity extends AppCompatActivity  {
 
             mPhoneNumber = countryCode + phone;
 
+
+//            Utils.putPhoneNumber(this, mPhoneNumber);
+//            startService(new Intent(LoginSignupActivity.this, XmppService.class));
+//            startActivity(new Intent(LoginSignupActivity.this, MainActivity.class));
+
             PhoneAuthProvider.OnVerificationStateChangedCallbacks mCallbacks = new PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
 
                 @Override

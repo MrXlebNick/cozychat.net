@@ -151,7 +151,7 @@ public class MessageFragment extends LoadableFragment  {
                 message.save();
                 onLoadStart();
 //
-//                FileManager fileManager = new Retrofit.Builder().baseUrl("http://http://ec2-18-216-77-83.us-east-2.compute.amazonaws.com:8080")
+//                FileManager fileManager = new Retrofit.Builder().baseUrl("http://http://ec2-35-162-177-84.us-west-2.compute.amazonaws.com:8080")
 //                        .build().create(FileManager.class);
 //                File file = new File(filePath);
 //
@@ -315,39 +315,36 @@ public class MessageFragment extends LoadableFragment  {
             sendProgressBar.setVisibility(View.VISIBLE);
             sendProgressBar.setProgress(0);
             sendProgressBar.setIndeterminate(true);
+            Log.d("shit", editText.getText().toString());
 
-            try {
-                XmppHelper.getInstance(mPhoneNumber)
-                        .sendMessagerx(mPhoneNumber,
-                                URLEncoder.encode(editText.getText().toString(), "utf-8"))
-                        .subscribeOn(Schedulers.newThread())
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(newMessage -> {
+            XmppHelper.getInstance(mPhoneNumber)
+                    .sendMessagerx(mPhoneNumber,
+                            editText.getText().toString())
+                    .subscribeOn(Schedulers.newThread())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(newMessage -> {
 
-                                getActivity().runOnUiThread(() -> {
-                                    messages.add(0, newMessage);
-                                    ((MessageAdapter) recyclerView.getAdapter()).setValues(messages);
-                                });
-
-                                mediaPlayer.start();
-                            },
-                            throwable -> {
-                                throwable.printStackTrace();
-                                Toaster.toast("Message was not sent: " + throwable.getMessage());
-                                btnSend.setColorFilter(Color.GRAY);
-                                btnSend.setVisibility(View.VISIBLE);
-                                sendProgressBar.setVisibility(View.GONE);
-                                editText.setText("");
-                            }, () -> {
-                                btnSend.setColorFilter(Color.GRAY);
-                                btnSend.setVisibility(View.VISIBLE);
-                                sendProgressBar.setVisibility(View.GONE);
-                                editText.setText("");
-                                recyclerView.scrollBy(5, 5);
+                            getActivity().runOnUiThread(() -> {
+                                messages.add(0, newMessage);
+                                ((MessageAdapter) recyclerView.getAdapter()).setValues(messages);
                             });
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
-            }
+
+                            mediaPlayer.start();
+                        },
+                        throwable -> {
+                            throwable.printStackTrace();
+                            Toaster.toast("Message was not sent: " + throwable.getMessage());
+                            btnSend.setColorFilter(Color.GRAY);
+                            btnSend.setVisibility(View.VISIBLE);
+                            sendProgressBar.setVisibility(View.GONE);
+                            editText.setText("");
+                        }, () -> {
+                            btnSend.setColorFilter(Color.GRAY);
+                            btnSend.setVisibility(View.VISIBLE);
+                            sendProgressBar.setVisibility(View.GONE);
+                            editText.setText("");
+                            recyclerView.scrollBy(5, 5);
+                        });
 
             isNewMesageEmpty = true;
         });
@@ -361,11 +358,10 @@ public class MessageFragment extends LoadableFragment  {
 
 
     private List<Message> getMessagesFromDb() {
-        List<Message> messages =  Message.findWithQuery(Message.class,
+
+        return Message.findWithQuery(Message.class,
                 "SELECT * FROM Message WHERE sender = ? OR receiver = ?  ORDER BY time DESC",
                 mPhoneNumber, mPhoneNumber);
-
-        return messages;
     }
 
     @Override
@@ -522,7 +518,7 @@ public class MessageFragment extends LoadableFragment  {
                     ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle(opponent);
 
                     Picasso.with(getContext())
-                            .load("http://ec2-18-216-77-83.us-east-2.compute.amazonaws.com:8080/" +
+                            .load("http://ec2-35-162-177-84.us-west-2.compute.amazonaws.com:8080/" +
                                     properties.get("avatarKey"))
                             .fit()
                             .centerCrop()

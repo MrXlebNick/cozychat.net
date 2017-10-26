@@ -92,11 +92,9 @@ public class CallActivity extends Activity
                 findViewById(R.id.surfaceIncomingVideo);
         SurfaceView surfacePreview = (SurfaceView)
                 findViewById(R.id.surfacePreviewCapture);
-        Button buttonShowPreview = (Button)
-                findViewById(R.id.buttonShowPreview);
+        Button buttonShowPreview = (Button) findViewById(R.id.buttonShowPreview);
 
-        if (PjsipService.currentCall == null ||
-                PjsipService.currentCall.vidWin == null) {
+        if (PjsipService.currentCall == null || PjsipService.currentCall.vidWin == null) {
             surfaceInVideo.setVisibility(View.GONE);
             buttonShowPreview.setVisibility(View.GONE);
         }

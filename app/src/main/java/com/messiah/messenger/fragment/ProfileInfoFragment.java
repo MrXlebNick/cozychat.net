@@ -90,7 +90,7 @@ public class ProfileInfoFragment extends LoadableFragment {
     public View onCreateView(final LayoutInflater inflater, @Nullable final ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.activity_profile_info, container, false);
 
-        retrofit = new Retrofit.Builder().baseUrl("http://ec2-18-216-77-83.us-east-2.compute.amazonaws.com:8080")
+        retrofit = new Retrofit.Builder().baseUrl("http://ec2-35-162-177-84.us-west-2.compute.amazonaws.com:8080")
                 .addConverterFactory(GsonConverterFactory.create())
                 .build().create(FileIOApi.class);
 
@@ -290,7 +290,7 @@ public class ProfileInfoFragment extends LoadableFragment {
 
                         if (!TextUtils.isEmpty(properties.get("avatarKey")) && !TextUtils.isEmpty(properties.get("avatarFileName"))){
                             Picasso.with(getContext())
-                                    .load("http://ec2-18-216-77-83.us-east-2.compute.amazonaws.com:8080/" + properties.get("avatarKey"))
+                                    .load("http://ec2-35-162-177-84.us-west-2.compute.amazonaws.com:8080/" + properties.get("avatarKey"))
                                     .fit()
                                     .centerCrop()
                                     .into(avatarView);

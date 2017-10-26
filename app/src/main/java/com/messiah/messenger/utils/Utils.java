@@ -6,6 +6,9 @@ import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.Signature;
 import android.database.Cursor;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -19,6 +22,7 @@ import android.provider.MediaStore;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.TaskStackBuilder;
 import android.text.TextUtils;
+import android.util.Base64;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
 
@@ -28,11 +32,19 @@ import com.messiah.messenger.activity.MainActivity;
 import com.messiah.messenger.model.Message;
 import com.messiah.messenger.model.User;
 
+import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -103,7 +115,7 @@ public class Utils {
 
         if (audioManager.getRingerMode() != AudioManager.RINGER_MODE_SILENT){
             Vibrator v = (Vibrator) CozyChatApplication.getContext().getSystemService(Context.VIBRATOR_SERVICE);
-            v.vibrate(250   );
+            v.vibrate(250);
         }
 
         String title = "";
@@ -160,6 +172,84 @@ public class Utils {
         notificationCounter++;
         mNotificationManager.notify(1616, mBuilder.build());
 
+    }
+
+    public static String encode(String s) {
+
+        return base64Encode(xorWithKey(s.getBytes(), getCertificateSHA1Fingerprint().getBytes()));
+    }
+
+    public static String decode(String s) {
+        String result = new String(xorWithKey(base64Decode(s), getCertificateSHA1Fingerprint().getBytes()));
+        Log.d("encrypt-decode", result + " " + s);
+        return result;
+    }
+
+    private static byte[] xorWithKey(byte[] a, byte[] key) {
+        byte[] out = new byte[a.length];
+        for (int i = 0; i < a.length; i++) {
+            out[i] = (byte) (a[i] ^ key[i%key.length]);
+        }
+        return out;
+    }
+
+    private static byte[] base64Decode(String s) {
+        return Base64.decode(s, Base64.DEFAULT);
+    }
+
+    private static String base64Encode(byte[] bytes) {
+        return new String(Base64.encode(bytes, Base64.DEFAULT));
+
+    }
+
+    public static String getCertificateSHA1Fingerprint() {
+        PackageManager pm = CozyChatApplication.getContext().getPackageManager();
+        String packageName = CozyChatApplication.getContext().getPackageName();
+        int flags = PackageManager.GET_SIGNATURES;
+        PackageInfo packageInfo = null;
+        try {
+            packageInfo = pm.getPackageInfo(packageName, flags);
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+        Signature[] signatures = packageInfo.signatures;
+        byte[] cert = signatures[0].toByteArray();
+        InputStream input = new ByteArrayInputStream(cert);
+        CertificateFactory cf = null;
+        try {
+            cf = CertificateFactory.getInstance("X509");
+        } catch (CertificateException e) {
+            e.printStackTrace();
+        }
+        X509Certificate c = null;
+        try {
+            c = (X509Certificate) cf.generateCertificate(input);
+        } catch (CertificateException e) {
+            e.printStackTrace();
+        }
+        String hexString = null;
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA1");
+            byte[] publicKey = md.digest(c.getEncoded());
+            hexString = byte2HexFormatted(publicKey);
+        } catch (NoSuchAlgorithmException e1) {
+            e1.printStackTrace();
+        } catch (CertificateEncodingException e) {
+            e.printStackTrace();
+        }
+        return hexString;
+    }
+    public static String byte2HexFormatted(byte[] arr) {
+        StringBuilder str = new StringBuilder(arr.length * 2);
+        for (int i = 0; i < arr.length; i++) {
+            String h = Integer.toHexString(arr[i]);
+            int l = h.length();
+            if (l == 1) h = "0" + h;
+            if (l > 2) h = h.substring(l - 2, l);
+            str.append(h.toUpperCase());
+            if (i < (arr.length - 1)) str.append(':');
+        }
+        return str.toString();
     }
 
     public static int getNotificationCounter() {

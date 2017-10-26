@@ -53,7 +53,7 @@ public class CozyChatApplication extends android.support.multidex.MultiDexApplic
         super.onCreate();
         SugarContext.init(this);
 
-//        ACRA.init(this);
+        ACRA.init(this);
 
         IntentFilter filter = new IntentFilter();
         filter.addAction("android.SipDemo.INCOMING_CALL");
