@@ -364,7 +364,6 @@ public class DialActivity extends AppCompatActivity {
                         clockView.setText(passedTime);
                         clockView.invalidate();
                         seconds++;
-
                     });
                     Thread.sleep(1000);
                 }
@@ -374,67 +373,7 @@ public class DialActivity extends AppCompatActivity {
 
             }
         }
-
     }
-
-//    private void setEndedState(){
-//        runOnUiThread(() -> {
-//
-//            parent.setBackgroundResource(R.drawable.dial_screen_background);
-//            hangupButton.setVisibility(View.GONE);
-//            ((View) takeButton.getParent()).setVisibility(View.GONE);
-//            if (wakeLock.isHeld()) {
-//                wakeLock.release();
-//            }
-//            if (thePlayer != null)
-//                thePlayer.release();
-//
-//            refreshCounterThread.setInterrupted(true);
-//
-//            Handler handler = new Handler();
-//            handler.postDelayed(DialActivity.this::finish, 2000);
-//        });
-//
-//    }
-//
-//    private void setIncomingState(){
-//        runOnUiThread(() -> {
-//
-//            parent.setBackgroundResource(R.drawable.dial_screen_background);
-//            hangupButton.setVisibility(View.GONE);
-//            ((View) takeButton.getParent()).setVisibility(View.GONE);
-//            if (wakeLock.isHeld()) {
-//                wakeLock.release();
-//            }
-//            if (thePlayer != null)
-//                thePlayer.release();
-//
-//            refreshCounterThread.setInterrupted(true);
-//
-//            Handler handler = new Handler();
-//            handler.postDelayed(DialActivity.this::finish, 2000);
-//        });
-//
-//    }
-//
-//    private void setOutcominState(){
-//        runOnUiThread(() -> {
-//
-//            parent.setBackgroundResource(R.drawable.dial_screen_background);
-//            hangupButton.setVisibility(View.GONE);
-//            ((View) takeButton.getParent()).setVisibility(View.GONE);
-//            if (wakeLock.isHeld()) {
-//                wakeLock.release();
-//            }
-//            if (thePlayer != null)
-//                thePlayer.release();
-//
-//            refreshCounterThread.setInterrupted(true);
-//
-//            Handler handler = new Handler();
-//            handler.postDelayed(DialActivity.this::finish, 2000);
-//        });
-//    }
 
     @Override
     protected void onStart() {

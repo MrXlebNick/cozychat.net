@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.net.sip.SipManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.design.widget.NavigationView;
@@ -29,6 +28,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.gcm.GoogleCloudMessaging;
+import com.google.gson.Gson;
+import com.messiah.messenger.Constants;
 import com.messiah.messenger.R;
 import com.messiah.messenger.fragment.DialogListFragment;
 import com.messiah.messenger.fragment.MessageFragment;
@@ -40,6 +41,7 @@ import com.messiah.messenger.model.User;
 import com.messiah.messenger.service.XmppService;
 import com.messiah.messenger.service.PjsipService;
 import com.messiah.messenger.service.RegistrationIntentService;
+import com.messiah.messenger.utils.CryptoUtils;
 import com.messiah.messenger.utils.Utils;
 import com.squareup.picasso.Picasso;
 
@@ -48,17 +50,27 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.math.BigInteger;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.security.Security;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Random;
+
+import javax.crypto.KeyAgreement;
+import javax.crypto.spec.DHParameterSpec;
+import javax.crypto.spec.DHPublicKeySpec;
 
 import io.github.rockerhieu.emojicon.EmojiconGridFragment;
 import io.github.rockerhieu.emojicon.EmojiconsFragment;
 import io.github.rockerhieu.emojicon.emoji.Emojicon;
 import io.github.rockerhieu.emojiconize.Emojiconize;
 import io.reactivex.android.schedulers.AndroidSchedulers;
-import xdroid.toaster.Toaster;
 
 
 public class MainActivity extends AppCompatActivity
@@ -80,6 +92,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         Emojiconize.activity(this).go();
+
         super.onCreate(savedInstanceState);
         if (getIntent().getBooleanExtra("EXIT", false)) {
             finish();
@@ -150,9 +163,12 @@ public class MainActivity extends AppCompatActivity
                     }
                 }, Throwable::printStackTrace);
 
-        if (!TextUtils.isEmpty(getIntent().getStringExtra(Utils.FROM_PHONE))) {
+        if (!TextUtils.isEmpty(getIntent().getStringExtra(Constants.FROM_PHONE))) {
             fragmentTransaction = getSupportFragmentManager().beginTransaction();
-            MessageFragment fragment = MessageFragment.newInstance(getIntent().getStringExtra(Utils.FROM_PHONE), "");
+            MessageFragment fragment = MessageFragment.newInstance(getIntent().getStringExtra(Constants.FROM_PHONE),
+                    "",
+                    getIntent().getBooleanExtra(Constants.IS_SECRET, false),
+                    getIntent().getStringExtra(Constants.SECRET_ID));
             fragment.setHasOptionsMenu(true);
             fragmentTransaction.replace(R.id.fragmnet_container, fragment);
             fragmentTransaction.addToBackStack(null);
@@ -325,14 +341,22 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onListFragmentInteraction(User item) {
+
+        onListFragmentInteraction(item, null);
+    }
+
+    @Override
+    public void onListFragmentInteraction(User peer, String dialogId) {
+
         FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
-        MessageFragment fragment = MessageFragment.newInstance(item.mPhoneNumber, item.mSipNumber);
+        MessageFragment fragment = MessageFragment.newInstance(peer.mPhoneNumber,
+                peer.mSipNumber,
+                !TextUtils.isEmpty(dialogId),
+                dialogId);
         fragment.setHasOptionsMenu(true);
         fragmentTransaction.replace(R.id.fragmnet_container, fragment);
         fragmentTransaction.addToBackStack(null);
         fragmentTransaction.commit();
-
-
     }
 
     @Override

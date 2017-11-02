@@ -2,9 +2,13 @@ package com.messiah.messenger.fragment;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.support.v4.view.PagerAdapter;
+import android.support.v4.view.PagerTitleStrip;
+import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,6 +20,7 @@ import com.messiah.messenger.adapter.DialogAdapter;
 import com.messiah.messenger.helpers.XmppHelper;
 import com.messiah.messenger.model.Dialog;
 import com.messiah.messenger.model.Message;
+import com.messiah.messenger.model.SecretDialogData;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -35,6 +40,7 @@ public class DialogListFragment extends LoadableFragment {
 
     private UserListFragment.OnListFragmentInteractionListener mListener;
     private RecyclerView recyclerView;
+    private RecyclerView secretRecyclerView;
     private TextView emptyView;
     private boolean isActive = false;
 
@@ -61,15 +67,44 @@ public class DialogListFragment extends LoadableFragment {
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_dialog_list, container, false);
 
+        ViewPager viewPager = (ViewPager) view.findViewById(R.id.view_pager);
+        viewPager.setAdapter(new PagerAdapter() {
+            @Override
+            public int getCount() {
+                return 2;
+            }
+
+            @Override
+            public boolean isViewFromObject(View view, Object object) {
+                return view == object;
+            }
+
+            @Override
+            public CharSequence getPageTitle(int position) {
+                return position == 0 ? "Plain" : "Secret";
+            }
+
+            @Override
+            public Object instantiateItem(ViewGroup container, int position) {
+                return view.findViewById(position == 0 ? R.id.list : R.id.secret_list);
+            }
+        });
+
         Context context = view.getContext();
         recyclerView = (RecyclerView) view.findViewById(R.id.list);
         recyclerView.setLayoutManager(new LinearLayoutManager(context));
+
+        secretRecyclerView = (RecyclerView) view.findViewById(R.id.secret_list);
+        secretRecyclerView.setLayoutManager(new LinearLayoutManager(context));
         emptyView = (TextView) view.findViewById(R.id.empty);
         DialogAdapter adapter = new DialogAdapter(mListener);
         recyclerView.setAdapter(adapter);
+        DialogAdapter secretAdapter = new DialogAdapter(mListener);
+        secretRecyclerView.setAdapter(secretAdapter);
 
 
         Message.findById(Message.class, 1);
+        SecretDialogData.findById(SecretDialogData.class, 1);
         return super.onCreateView(inflater, container, savedInstanceState, view);
     }
 
@@ -110,29 +145,52 @@ public class DialogListFragment extends LoadableFragment {
 
         Log.d("***", "update dialogs");
         List<Message> messages = Message.findWithQuery(Message.class,
-                "SELECT * FROM Message ORDER BY time");
+                "SELECT * FROM Message WHERE dialog_id IS NULL OR dialog_id = \"\" ORDER BY time");
+        List<Dialog> dialogs = groupInDialogs(messages);
+
+        List<Message> secretMessages = Message.findWithQuery(Message.class,
+                "SELECT * FROM Message WHERE dialog_id IS NOT NULL AND dialog_id != \"\" ORDER BY time");
+        List<Dialog> secretDialogs = groupInDialogs(secretMessages);
+
+        emptyView.setVisibility(dialogs.size() == 0 && secretDialogs.size() == 0 ? View.VISIBLE : View.GONE);
+
+        ((DialogAdapter) recyclerView.getAdapter()).setValues(dialogs);
+        ((DialogAdapter) secretRecyclerView.getAdapter()).setValues(secretDialogs);
+        onLoaded();
+
+    }
+
+    private List<Dialog> groupInDialogs(List<Message> messages) {
         List<Dialog> dialogs = new ArrayList<>();
         for (Message message : messages) {
             boolean isDialogExist = false;
             for (Dialog dialog : dialogs) {
-                if ((message.isFromMe ? message.receiver : message.sender).equals(dialog.peer.mPhoneNumber)) {
-                    dialog.addMessage(message);
-                    isDialogExist = true;
-                    break;
+                if (!TextUtils.isEmpty(message.dialogId)) {
+                    if (dialog.dialogId.equals(message.dialogId)){
+                        dialog.addMessage(message);
+                        isDialogExist = true;
+                        break;
+                    }
+                } else {
+
+                    if ((message.isFromMe ? message.receiver : message.sender).equals(dialog.peer.mPhoneNumber)) {
+                        dialog.addMessage(message);
+                        isDialogExist = true;
+                        break;
+                    }
                 }
             }
             if (!isDialogExist) {
                 Dialog dialog = new Dialog(getContext(), message.isFromMe ? message.receiver : message.sender);
                 dialog.addMessage(message);
+                if (!TextUtils.isEmpty(message.dialogId)){
+                    dialog.dialogId = message.dialogId;
+                }
                 dialogs.add(dialog);
             }
 
         }
-        emptyView.setVisibility(dialogs.size() == 0 ? View.VISIBLE : View.GONE);
-
-        ((DialogAdapter) recyclerView.getAdapter()).setValues(dialogs);
-        onLoaded();
-
+        return dialogs;
     }
 
     @Override

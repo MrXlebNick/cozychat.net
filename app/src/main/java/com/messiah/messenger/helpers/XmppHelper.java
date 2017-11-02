@@ -13,27 +13,37 @@ import com.messiah.messenger.Constants;
 import com.messiah.messenger.CozyChatApplication;
 import com.messiah.messenger.fragment.MessageFragment;
 import com.messiah.messenger.model.Message;
+import com.messiah.messenger.model.SecretDialogData;
 import com.messiah.messenger.model.User;
 import com.messiah.messenger.utils.FileIOApi;
 import com.messiah.messenger.utils.FileResponse;
 import com.messiah.messenger.utils.Utils;
 
+import org.bouncycastle.jcajce.provider.asymmetric.dh.BCDHPublicKey;
 import org.greenrobot.eventbus.EventBus;
 import org.jivesoftware.smack.AbstractXMPPConnection;
 import org.jivesoftware.smack.ConnectionConfiguration;
 import org.jivesoftware.smack.ConnectionListener;
 import org.jivesoftware.smack.SASLAuthentication;
 import org.jivesoftware.smack.SmackConfiguration;
+import org.jivesoftware.smack.SmackException;
+import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.XMPPConnection;
-import org.jivesoftware.smack.chat.ChatManagerListener;
+import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.chat2.Chat;
 import org.jivesoftware.smack.chat2.ChatManager;
 import org.jivesoftware.smack.chat2.IncomingChatMessageListener;
+import org.jivesoftware.smack.packet.DefaultExtensionElement;
+import org.jivesoftware.smack.packet.StandardExtensionElement;
+import org.jivesoftware.smack.packet.Stanza;
+import org.jivesoftware.smack.parsing.StandardExtensionElementProvider;
+import org.jivesoftware.smack.provider.ProviderManager;
 import org.jivesoftware.smack.sasl.SASLMechanism;
 import org.jivesoftware.smack.sasl.provided.SASLDigestMD5Mechanism;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
-//import org.jivesoftware.smackx.omemo.OmemoManager;
+import org.jivesoftware.smackx.iqregister.AccountManager;
+import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptManager;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
 import org.jivesoftware.smackx.search.ReportedData;
@@ -45,16 +55,31 @@ import org.jivesoftware.smackx.xdata.Form;
 import org.jxmpp.jid.DomainBareJid;
 import org.jxmpp.jid.EntityBareJid;
 import org.jxmpp.jid.impl.JidCreate;
+import org.jxmpp.jid.parts.Localpart;
 import org.jxmpp.stringprep.XmppStringprepException;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.security.Key;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.PublicKey;
+import java.security.SecureRandom;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+
+import javax.crypto.KeyAgreement;
+import javax.crypto.interfaces.DHPublicKey;
+import javax.crypto.spec.DHParameterSpec;
 
 import io.reactivex.Observable;
 import io.reactivex.schedulers.Schedulers;
@@ -70,21 +95,23 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 import static com.messiah.messenger.Constants.MESSAGE_FILE_INDEX_PREFIX;
 
+//import org.jivesoftware.smackx.omemo.OmemoManager;
+
 /**
  * Created by XlebNick for CMessenger.
  */
 
-public class XmppHelper implements IncomingChatMessageListener {
+public class XmppHelper implements IncomingChatMessageListener, StanzaListener {
 
-    public static final String MESSAGE_RECEIVED = "cozychat.net.MESSAGE_RECEIVED";
-    public static final String FROM_EXTRA = "cozychat.net.FROM_EXTRA";
-    public static final String TIME_EXTRA = "cozychat.net.DATE_EXTRA";
-    public static final String MESSAGE_EXTRA = "cozychat.net.MESSAGE_EXTRA";
-    private static final String SERVICE_NAME = "ec2-18-216-77-83.us-east-2.compute.amazonaws.com";
+    private static final String MESSAGE_RECEIVED = "cozychat.net.MESSAGE_RECEIVED";
+    private static final String FROM_EXTRA = "cozychat.net.FROM_EXTRA";
+    private static final String TIME_EXTRA = "cozychat.net.DATE_EXTRA";
+    private static final String MESSAGE_EXTRA = "cozychat.net.MESSAGE_EXTRA";
+    private static final String SERVICE_NAME = "ec2-35-162-177-84.us-west-2.compute.amazonaws.com";
     private static XmppHelper mInstance;
     private String mLogin;
     private AbstractXMPPConnection mConnection;
-    private ChatManagerListener chatListener;
+//    private ChatManagerListener chatListener;
 //    private OmemoManager omemoManager;
 
     private XmppHelper(String login) {
@@ -119,6 +146,29 @@ public class XmppHelper implements IncomingChatMessageListener {
     private void init() {
         Log.d("xmpp", "init");
 
+        ProviderManager.addExtensionProvider("DH-Nikita-Inv",
+                "dh-nikita-inv",
+                new StandardExtensionElementProvider());
+
+        ProviderManager.addExtensionProvider("DH-Nikita-Acc",
+                "dh-nikita-acc",
+                new StandardExtensionElementProvider());
+        ProviderManager.addExtensionProvider("DH-Nikita-Message-Err",
+                "dh-nikita-message-error",
+                new StandardExtensionElementProvider());
+        ProviderManager.addExtensionProvider(DeliveryReceipt.ELEMENT,
+                DeliveryReceipt.NAMESPACE,
+                new DeliveryReceipt.Provider());
+        ProviderManager.addExtensionProvider(DeliveryReceipt.ELEMENT,
+                DeliveryReceipt.NAMESPACE,
+                new DeliveryReceipt.Provider());
+        ProviderManager.addExtensionProvider(DeliveryReceipt.ELEMENT,
+                DeliveryReceipt.NAMESPACE,
+                new DeliveryReceipt.Provider());
+        ProviderManager.addExtensionProvider(DeliveryReceiptRequest.ELEMENT,
+                new DeliveryReceiptRequest().getNamespace(),
+                new DeliveryReceiptRequest.Provider());
+
         XMPPTCPConnectionConfiguration config = null;
         try {
             config = XMPPTCPConnectionConfiguration.builder()
@@ -136,14 +186,34 @@ public class XmppHelper implements IncomingChatMessageListener {
 
         SmackConfiguration.DEBUG = true;
 
+
+
         SASLMechanism mechanism = new SASLDigestMD5Mechanism();
         SASLAuthentication.registerSASLMechanism(mechanism);
         SASLAuthentication.blacklistSASLMechanism("SCRAM-SHA-1");
         SASLAuthentication.blacklistSASLMechanism("DIGEST-MD5");
         SASLAuthentication.unBlacklistSASLMechanism("PLAIN");
         mConnection = new XMPPTCPConnection(config);
+        DeliveryReceiptManager.setDefaultAutoReceiptMode(DeliveryReceiptManager.AutoReceiptMode.always);
         DeliveryReceiptManager.getInstanceFor(mConnection).autoAddDeliveryReceiptRequests();
 
+        DeliveryReceiptManager.getInstanceFor(mConnection)
+                .addReceiptReceivedListener((fromJid, toJid, deliveryReceiptId, stanza) -> {
+                    Stanza received = new org.jivesoftware.smack.packet.Message();
+                    received.addExtension(new DeliveryReceipt(deliveryReceiptId));
+                    received.setTo(fromJid);
+                    try {
+                        mConnection.sendStanza(received);
+                    } catch (SmackException.NotConnectedException | InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    Log.d(
+                            "***",
+                            "onReceiptReceived: from: " + fromJid + " to: " + toJid +
+                                    " deliveryReceiptId: " + deliveryReceiptId + " stanza: " + stanza);
+                });
+
+        mConnection.addAsyncStanzaListener(this, null);
         mConnection.addConnectionListener(new ConnectionListener() {
 
             @Override
@@ -189,7 +259,7 @@ public class XmppHelper implements IncomingChatMessageListener {
 
     }
 
-    public io.reactivex.Observable<XMPPConnection> connectrx(){
+    private io.reactivex.Observable<XMPPConnection> connectrx(){
         if (mConnection == null) {
             init();
         }
@@ -241,79 +311,17 @@ public class XmppHelper implements IncomingChatMessageListener {
             try{
                 mConnection.connect();
             } catch (Exception e){
-                emitter.onError(e);
+                if (e.getMessage().contains("Client is already connected")) {
+                    mConnection.removeConnectionListener(listener);
+                    emitter.onNext(mConnection);
+                    emitter.onComplete();
+                } else {
+                    emitter.onError(e);
+                }
             }
         });
     }
 
-
-//    public void connect() {
-//
-//        if (mConnection == null) {
-//            init();
-//        }
-//
-//        try {
-//            loginOrRegister();
-//        } catch (XMPPException | SmackException | IOException e) {
-//            e.printStackTrace();
-//        }
-//        setMessageListener();
-//        DeliveryReceiptManager.getInstanceFor(mConnection)
-//                .addReceiptReceivedListener((fromJid, toJid, deliveryReceiptId, stanza) -> Log.d(
-//                        "***",
-//                        "onReceiptReceived: from: " + fromJid + " to: " + toJid +
-//                                " deliveryReceiptId: " + deliveryReceiptId + " stanza: " + stanza));
-//    }
-
-
-
-//    public void loginOrRegister() throws IOException, XMPPException, SmackException {
-//        try {
-//            if (! mConnection.isConnected()) { mConnection.connect(); }
-//        } catch (SASLErrorException e) {
-//
-//
-//            e.printStackTrace();
-//            AccountManager accountManager = AccountManager.getInstance(mConnection);
-//            try {
-//                accountManager.sensitiveOperationOverInsecureConnection(true);
-//                accountManager.createAccount(mLogin, mLogin);
-//                mConnection.disconnect();
-//                loginOrRegister();
-//            } catch (XMPPException | IOException | SmackException e1) {
-//                e1.printStackTrace();
-//                throw e1;
-//            }
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//
-//        try {
-//
-//            if (! mConnection.isAuthenticated()) {
-//
-//                mConnection.login(mLogin, mLogin, null);
-//                Log.d("***", "login as good boys do");
-//            }
-//        } catch (SASLErrorException e) {
-//
-//            Log.d("***", "login asl");
-//            e.printStackTrace();
-//            AccountManager accountManager = AccountManager.getInstance(mConnection);
-//            try {
-//                accountManager.sensitiveOperationOverInsecureConnection(true);
-//                accountManager.createAccount(mLogin, mLogin);
-//                loginOrRegister();
-//            } catch (XMPPException | IOException | SmackException e1) {
-//                e1.printStackTrace();
-//            }
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//
-//        getUserPropertiesrx(mLogin);
-//    }
     
     public io.reactivex.Observable<HashMap<String, String>> getUserPropertiesrx(){
         return getUserPropertiesrx(mLogin);
@@ -374,8 +382,13 @@ public class XmppHelper implements IncomingChatMessageListener {
 
     public io.reactivex.Observable<XMPPConnection> getSignedInObservable() {
         io.reactivex.Observable<XMPPConnection> observable = getConnectedObservable();
-        if (!mConnection.isAuthenticated())
+        if (!mConnection.isAuthenticated() || mConnection.isAnonymous()){
             observable = observable.flatMap(o -> loginrx());
+        }
+        observable = observable.onErrorResumeNext(throwable -> throwable.getMessage().contains("not-authorized") ?
+                getConnectedObservable().flatMap(xmppConnection -> registerrx())
+                    .flatMap(xmppConnection -> getConnectedObservable()
+                        .flatMap(xmppConnection2 -> loginrx())) : Observable.error(throwable));
         return observable;
     }
 
@@ -410,9 +423,7 @@ public class XmppHelper implements IncomingChatMessageListener {
         MultipartBody.Part body =
                 MultipartBody.Part.createFormData(Constants.FILE_MULTIPART_NAME, avatar.getName(), requestFile);
 
-
-
-        FileIOApi retrofit = new Retrofit.Builder().baseUrl("http://ec2-18-216-77-83.us-east-2.compute.amazonaws.com:8080")
+        FileIOApi retrofit = new Retrofit.Builder().baseUrl("http://ec2-35-162-177-84.us-west-2.compute.amazonaws.com:8080")
                 .addConverterFactory(GsonConverterFactory.create())
                 .build().create(FileIOApi.class);
 
@@ -454,7 +465,7 @@ public class XmppHelper implements IncomingChatMessageListener {
                 }
             };
 
-            FileIOApi retrofit = new Retrofit.Builder().baseUrl("http://ec2-18-216-77-83.us-east-2.compute.amazonaws.com:8080")
+            FileIOApi retrofit = new Retrofit.Builder().baseUrl("http://ec2-35-162-177-84.us-west-2.compute.amazonaws.com:8080")
                     .addConverterFactory(GsonConverterFactory.create())
                     .build().create(FileIOApi.class);
             retrofit.getFile(avatarKey).enqueue(callback);
@@ -617,7 +628,6 @@ public class XmppHelper implements IncomingChatMessageListener {
         return getSignedInObservable().subscribeOn(Schedulers.newThread()).map(xmppConnection -> {
 
             UserSearchManager manager = new UserSearchManager(mConnection);
-            String searchFormString = "search." + mConnection.getServiceName();
             Form searchForm;
 
             DomainBareJid searchJid = JidCreate.domainBareFrom("search." + mConnection.getServiceName());
@@ -679,16 +689,29 @@ public class XmppHelper implements IncomingChatMessageListener {
     }
 
     public io.reactivex.Observable<Message> sendMessagerx(String mPhoneNumber, String messageString) {
+        return sendMessagerx(mPhoneNumber, messageString, null);
+    }
+
+    public io.reactivex.Observable<Message> sendMessagerx(String mPhoneNumber, String messageString,
+                                                          String dialogId) {
         return getSignedInObservable().subscribeOn(Schedulers.newThread()).map(xmppConnection -> {
             org.jivesoftware.smack.packet.Message message = new org.jivesoftware.smack.packet.Message();
-            message.setBody(messageString);
+            String messageBody = messageString;
+            if (!TextUtils.isEmpty(dialogId)) {
+                SecretDialogData secretDialogData = SecretDialogData
+                        .find(SecretDialogData.class, "dialog_id = \"" + dialogId+ "\" AND opponent_number = \"" + mPhoneNumber + "\"")
+                        .get(0);
+                if (! secretDialogData.isComplete || secretDialogData.secret == null || secretDialogData.secret.length ==0 ) {
+                    throw new IndexOutOfBoundsException("Secret is absent");
+                }
+                messageBody = "!!--ENCRYPTED" + dialogId + Utils.encode(messageBody, secretDialogData.secret);
+            }
+            message.setBody(URLEncoder.encode(messageBody, "utf-8"));
 
             EntityBareJid userJid = JidCreate.entityBareFrom(mPhoneNumber + "@" + SERVICE_NAME);
             ChatManager chatManager = ChatManager.getInstanceFor(mConnection);
-            Chat chat =
-                    chatManager.chatWith(userJid);
-            
-////
+            Chat chat = chatManager.chatWith(userJid);
+//
 //            try {
 //                HashMap<OmemoDevice, OmemoFingerprint> fingerprints =
 //                        omemoManager.getActiveFingerprints(userJid);
@@ -699,11 +722,10 @@ public class XmppHelper implements IncomingChatMessageListener {
 //            } catch (Exception e){
 //                e.printStackTrace();
 //            }
-
-
             String deliveryReceiptId = DeliveryReceiptRequest.addTo(message);
+//            message = DeliveryReceiptManager.receiptMessageFor(message);
 //            OmemoManager.getInstanceFor(mConnection).buildSessionsWith(userJid);
-
+//
 //            org.jivesoftware.smack.packet.Message encrypted = null;
 //            try {
 //                encrypted = OmemoManager.getInstanceFor(mConnection).encrypt(userJid, message.toString());
@@ -722,6 +744,7 @@ public class XmppHelper implements IncomingChatMessageListener {
 //                encrypted = omemoManager.encryptForExistingSessions(e, message.toString());
 //            }
 
+            Log.d("shit", new Gson().toJson(message));
             chat.send(message);
             Message messageForDb = new Message();
             messageForDb.sender = Utils.getPhoneNumber(CozyChatApplication.getContext());
@@ -730,11 +753,6 @@ public class XmppHelper implements IncomingChatMessageListener {
             messageForDb.time = System.currentTimeMillis();
             messageForDb.isFromMe = true;
             messageForDb.messageId = deliveryReceiptId;
-            try {
-                messageForDb.body = URLDecoder.decode(message.getBody(), "utf-8");
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
-            }
             messageForDb.save();
             return messageForDb;
         });
@@ -754,160 +772,6 @@ public class XmppHelper implements IncomingChatMessageListener {
             }
         });
     }
-
-//    public void sendMessage(Message localMessage) {
-//        if (! mConnection.isConnected()) {
-//            try {
-//                loginOrRegister();
-//            } catch (SmackException e) {
-//                e.printStackTrace();
-//                if (e instanceof SmackException.ConnectionException) {
-//                    loginTrials = 0;
-//                    Toaster.toast("Network error, try later");
-//                    return;
-//                }
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//                Toaster.toast("An error occurred: " + e.getMessage());
-//                return;
-//            }
-//        }
-//        org.jivesoftware.smack.packet.Message message = new org.jivesoftware.smack.packet.Message();
-//        message.setBody(localMessage.body);
-//
-//        ChatManager chatManager = ChatManager.getInstanceFor(mConnection);
-//        try {
-//            Chat chat =
-//                    chatManager.createChat(localMessage.receiver + "@" + SERVICE_NAME);
-//
-//            String deliveryReceiptId = DeliveryReceiptRequest.addTo(message);
-//
-//
-//            chat.sendMessage(message);
-//            localMessage.messageId = deliveryReceiptId;
-//            localMessage.save();
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            Toaster.toast("Error while sending message: " + e.getMessage());
-//        }
-//
-//
-//    }
-
-    //    private void receiveFile() {
-//        // TODO Auto-generated method stub
-//        if (mConnection != null) {
-//
-//            FileTransferManager manager = FileTransferManager.getInstanceFor(mConnection);
-//
-//            manager.addFileTransferListener(new FileTransferListener() {
-//
-//                public void fileTransferRequest(final FileTransferRequest request) {
-//                    new Thread() {
-//
-//                        @Override
-//                        public void run() {
-//                            IncomingFileTransfer transfer = request.accept();
-//                            File mf = Environment.getExternalStorageDirectory();
-//                            final File file = new File(mf.getAbsoluteFile() + "/" + transfer.getFileName());
-//                            try {
-//                                transfer.recieveFile(file);
-//                                while (!transfer.isDone()) {
-//                                    try {
-//                                        Thread.sleep(1000);
-//                                    } catch (Exception e) {
-//                                        Log.e("", e.getMessage());
-//                                    }
-//                                    if (transfer.getStatus().equals(FileTransfer.Status.error)) {
-//                                        Log.e("ERROR!!! ", transfer.getError() + "");
-//                                    }
-//                                    if (transfer.getException() != null) {
-//                                        transfer.getException().printStackTrace();
-//                                    }
-//                                }
-//                                Handler handler = new Handler();
-//                                handler.post(new Runnable() {
-//
-//                                    @Override
-//                                    public void run() {
-//                                        // TODO Auto-generated method stub
-////                                        String xMsg = textViewSent.getText().toString();
-//                                        String newMessage = "File Received at " + file.getAbsolutePath();
-//                                        Log.d("***", newMessage);
-////                                        textViewSent.setText("\n"+xMsg+"\n"+newMessage);
-//                                    }
-//                                });
-//                            } catch (Exception e) {
-//                                e.printStackTrace();
-//                            }
-//                        }
-//
-//                        ;
-//                    }.start();
-//                }
-//            });
-//        }
-//
-//    }
-//
-//
-//    public OutgoingFileTransfer sendFile(final Message message) {
-//
-//        ServiceDiscoveryManager sdm = ServiceDiscoveryManager.getInstanceFor(mConnection);
-//        if (sdm == null) {
-//            sdm = ServiceDiscoveryManager.getInstanceFor(mConnection);
-//        }
-//        sdm.addFeature("http://jabber.org/protocol/disco#info");
-//        sdm.addFeature("jabber:iq:privacy");
-//
-//        if (transferManager == null) {
-//            transferManager = FileTransferManager.getInstanceFor(mConnection);
-//        }
-//
-//        Log.d("***", mConnection.getUser().substring(mConnection.getUser().indexOf("/" ) + 1));
-//
-//        final OutgoingFileTransfer transfer = transferManager.createOutgoingFileTransfer(
-//                XmppStringUtils.completeJidFrom(message.receiver, SERVICE_NAME, "mobile"));
-//
-//        final File file = new File(message.body);
-//        Log.d("***", message.body);
-////        transfer.setResponseTimeout();
-//
-//        try {
-//            transfer.sendFile(file, "GeeChat received media");
-//            message.fileStatus = Message.FILE_STATUS_LOADING;
-//            message.messageId = transfer.getStreamID();
-//            message.update();
-//            fileTransfers.add(transfer);
-//        } catch (SmackException e) {
-//            Log.d("***", "exception");
-//            message.fileStatus = Message.FILE_STATUS_FAILED;
-//            message.messageId = transfer.getStreamID();
-//            message.update();
-//            e.printStackTrace();
-//        }
-//        new Thread(new FileStatusRunnable(message, transfer)).start();
-//
-//        return transfer;
-//    }
-//
-//        public void setReceiveFileListener() {
-//
-////
-//        ServiceDiscoveryManager sdm = ServiceDiscoveryManager.getInstanceFor(mConnection);
-//        if (sdm == null) {
-//            sdm = ServiceDiscoveryManager.getInstanceFor(mConnection);
-//        }
-//        sdm.addFeature("http://jabber.org/protocol/disco#info");
-//        sdm.addFeature("jabber:iq:privacy");
-//        transferManager = FileTransferManager.getInstanceFor(mConnection);
-//
-//        transferManager.addFileTransferListener(fileListener);
-////        receiveFile();
-//
-//    }
-
-
 
     public io.reactivex.Observable<Boolean> sendFileMessagerx(Message mItem, String messageString) {
         return getSignedInObservable().subscribeOn(Schedulers.newThread()).map(xmppConnection -> {
@@ -953,6 +817,7 @@ public class XmppHelper implements IncomingChatMessageListener {
             init();
         }
         return io.reactivex.Observable.create(emitter -> {
+            Log.d("xmpp", "logging in");
             ConnectionListener listener = new ConnectionListener() {
                 @Override
                 public void connected(XMPPConnection connection) {
@@ -963,6 +828,7 @@ public class XmppHelper implements IncomingChatMessageListener {
 
                     emitter.onNext(connection);
                     connection.removeConnectionListener(this);
+                    emitter.onComplete();
 
 //                    try {
 //                        SignalOmemoService.acknowledgeLicense();
@@ -995,8 +861,8 @@ public class XmppHelper implements IncomingChatMessageListener {
 
                 @Override
                 public void connectionClosedOnError(Exception e) {
-                    emitter.onError(e);
                     mConnection.removeConnectionListener(this);
+                    emitter.onError(e);
                 }
 
                 @Override
@@ -1018,20 +884,196 @@ public class XmppHelper implements IncomingChatMessageListener {
             try {
                 mConnection.login(mLogin, mLogin, null);
             } catch (Exception e){
-                emitter.onError(e);
+                if (e.getMessage().contains("Client is already logged in")){
+
+                    mConnection.removeConnectionListener(listener);
+                    emitter.onNext(mConnection);
+                    emitter.onComplete();
+                } else {
+                    mConnection.removeConnectionListener(listener);
+                    emitter.onError(e);
+                }
             }
         });
     }
 
+    private io.reactivex.Observable<XMPPConnection> registerrx() {
+
+
+        return io.reactivex.Observable.create(emitter -> {
+
+            Log.d("xmpp", "creating");
+            AccountManager accountManager = AccountManager.getInstance(mConnection);
+            try {
+                accountManager.sensitiveOperationOverInsecureConnection(true);
+                accountManager.createAccount(Localpart.from(mLogin), mLogin);
+                mConnection.disconnect();
+                emitter.onNext(mConnection);
+                emitter.onComplete();
+
+            } catch (XMPPException | IOException | SmackException e1) {
+                emitter.onError(e1);
+            }
+        });
+
+    }
+
     @Override
     public void newIncomingMessage(EntityBareJid from, org.jivesoftware.smack.packet.Message message, Chat chat) {
-        String body = "";
+
+        Log.d("***", "newIncomingMessage " );
+        StandardExtensionElement dhInv = (StandardExtensionElement) message.getExtension("dh-nikita-inv");
+
+        if (dhInv != null){
+
+            Log.d("***", "Invitation received ");
+            String aParameter = dhInv.getAttributeValue("aParameter");
+            String pParameter = dhInv.getAttributeValue("pParameter");
+            String gParameter = dhInv.getAttributeValue("gParameter");
+            String dialogId = dhInv.getAttributeValue("dialogId");
+            if (TextUtils.isEmpty(aParameter)){
+                Log.e("encrypt", "aParameter is empty");
+                return;
+            }
+            if (TextUtils.isEmpty(pParameter)){
+                Log.e("encrypt", "pParameter is empty");
+                return;
+            }
+            if (TextUtils.isEmpty(gParameter)){
+                Log.e("encrypt", "gParameter is empty");
+                return;
+            }
+            if (TextUtils.isEmpty(dialogId)){
+                Log.e("encrypt", "dialogId is empty");
+                return;
+            }
+            try {
+                KeyAgreement aKeyAgree = KeyAgreement.getInstance("DH", "BC");
+                DHParameterSpec dhParams = new DHParameterSpec(new BigInteger(pParameter), new BigInteger(gParameter));
+                KeyPairGenerator keyGen = KeyPairGenerator.getInstance("DH", "BC");
+                keyGen.initialize(dhParams, new SecureRandom());
+                KeyPair bPair = keyGen.generateKeyPair();
+                aKeyAgree.init(bPair.getPrivate());
+
+                KeyFactory clientKeyFac = KeyFactory.getInstance("DH");
+                X509EncodedKeySpec x509KeySpec = new X509EncodedKeySpec(new BigInteger(aParameter,16).toByteArray());
+                PublicKey bobDHPub = clientKeyFac.generatePublic(x509KeySpec);
+                aKeyAgree.doPhase(bobDHPub, true);
+
+                SecretDialogData secretDialogData = new SecretDialogData();
+                secretDialogData.opponentNumber = from.getLocalpart().toString();
+//                secretDialogData.setPrivateKey();
+                secretDialogData.dialogId = dialogId;
+                secretDialogData.isComplete = true;
+                secretDialogData.secret = aKeyAgree.generateSecret();
+                secretDialogData.save();
+
+                sendSecretDialogAcception(bPair.getPublic(), dialogId, secretDialogData.opponentNumber);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            return;
+        }
+
+
+        StandardExtensionElement dhAcc =  message.getExtension("DH-Nikita-Acc", "dh-nikita-acc");
+
+        if (dhAcc != null){
+
+
+            Log.d("***", "Second phase received");
+
+            String bParameter = dhAcc.getAttributeValue("bParameter");
+            String dialogId = dhAcc.getAttributeValue("dialogId");
+
+            SecretDialogData secretDialogData;
+            try {
+                secretDialogData = SecretDialogData.find(SecretDialogData.class,
+                        " dialog_id = \"" + dialogId + "\" AND opponent_number = \"" + from.getLocalpart().toString() + "\"").get(0);
+            } catch (IndexOutOfBoundsException e){
+                e.printStackTrace();
+                sendSecretAcceptionError(from.getLocalpart().toString(), dialogId, "No such dialog");
+                return;
+            }
+
+            try {
+
+                KeyAgreement aKeyAgree = KeyAgreement.getInstance("DH", "BC");
+                aKeyAgree.init(secretDialogData.getPrivateKey());
+
+                KeyFactory clientKeyFac = KeyFactory.getInstance("DH");
+                X509EncodedKeySpec x509KeySpec = new X509EncodedKeySpec(new BigInteger(bParameter,16).toByteArray());
+                PublicKey bobDHPub = clientKeyFac.generatePublic(x509KeySpec);
+                aKeyAgree.doPhase(bobDHPub, true);
+
+                secretDialogData.secret = aKeyAgree.generateSecret();
+                secretDialogData.isComplete = true;
+                secretDialogData.update();
+
+                EventBus.getDefault().post(secretDialogData);
+            } catch (Exception e) {
+
+                sendSecretAcceptionError(from.getLocalpart().toString(), dialogId, "Cannot create key");
+                e.printStackTrace();
+                return;
+            }
+            return;
+        }
+
+        StandardExtensionElement dhEncMessageError =  message.getExtension("DH-Nikita-Message-Err", "dh-nikita-message-err");
+
+        if (dhEncMessageError != null){
+
+            Log.d("***", "error");
+            String stanzaId = dhEncMessageError.getAttributeValue("stanzaId");
+            String reason = dhEncMessageError.getAttributeValue("reason");
+
+            try {
+                Message erroredMessage = Message.find(Message.class, "receiver = ?, message_id = ?",
+                        from.getLocalpart().toString(), stanzaId).get(0);
+                erroredMessage.error = reason;
+                erroredMessage.status = Message.Status.ERROR;
+                erroredMessage.update();
+                EventBus.getDefault().post(erroredMessage);
+            } catch (IndexOutOfBoundsException e) {
+                e.printStackTrace();
+            }
+            return;
+        }
+
+        String body;
+        Message messageForDb = new Message();
         try {
             body = URLDecoder.decode(message.getBody(), "utf-8");
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
+            return;
         }
-        Message messageForDb = new Message();
+
+        if (body.contains("!!--ENCRYPTED")) {
+            String dialogId = body.substring(13, 45);
+            String opponent = from.getLocalpart().toString();
+            SecretDialogData secretDialogData;
+            try {
+                secretDialogData = SecretDialogData.find(SecretDialogData.class,
+                        "dialog_id = \""+dialogId+"\" AND opponent_number = \""+opponent+"\"")
+                        .get(0);
+            } catch (IndexOutOfBoundsException e){
+                e.printStackTrace();
+                sendEncryptedMessageError(opponent, message.getStanzaId(), "No established connection");
+                return;
+            }
+
+            if (!secretDialogData.isComplete || secretDialogData.secret == null || secretDialogData.secret.length == 0) {
+                sendEncryptedMessageError(opponent, message.getStanzaId(), "No established connection");
+                return;
+            }
+
+            body = Utils.decode(body.substring(45), secretDialogData.secret);
+            messageForDb.dialogId = dialogId;
+        }
 
         if (body.contains(MESSAGE_FILE_INDEX_PREFIX)) {
             String[] parts = body.split(Pattern.quote(MESSAGE_FILE_INDEX_PREFIX));
@@ -1040,18 +1082,19 @@ public class XmppHelper implements IncomingChatMessageListener {
             messageForDb.type = Constants.MESSAGE_TYPE_FILE;
 
         } else {
-
             messageForDb.type = Constants.MESSAGE_TYPE_TEXT;
             messageForDb.body = body;
         }
 
-        messageForDb.sender = from.getLocalpartOrNull().intern();
+        messageForDb.sender = message.getFrom().getLocalpartOrNull().intern();
         messageForDb.isFromMe = false;
         messageForDb.time = System.currentTimeMillis();
         messageForDb.messageId = message.getStanzaId();
         messageForDb.receiver = Utils.getPhoneNumber(CozyChatApplication.getContext());
 
-        Log.d("***", messageForDb.body + " " + messageForDb.sender + " " + message.getStanzaId());
+
+
+        Log.d("***", new Gson().toJson(messageForDb));
         if (! TextUtils.isEmpty(messageForDb.body)) {
             messageForDb.save();
             if (! MessageFragment.isActive) {
@@ -1071,7 +1114,108 @@ public class XmppHelper implements IncomingChatMessageListener {
 
     }
 
+    private void sendEncryptedMessageError(String to, String stanzaId, String reason) {
+        getSignedInObservable().subscribeOn(Schedulers.newThread()).subscribe(xmppConnection -> {
+            org.jivesoftware.smack.packet.Message message = new org.jivesoftware.smack.packet.Message();
+            message.addExtension(StandardExtensionElement.builder("DH-Nikita-Message-Err", "dh-nikita-message-err")
+                    .addAttribute("stanzaId", stanzaId)
+                    .addAttribute("reason", reason)
+                    .build());
 
+            EntityBareJid userJid = JidCreate.entityBareFrom(to + "@" + SERVICE_NAME);
+            ChatManager chatManager = ChatManager.getInstanceFor(mConnection);
+            Chat chat = chatManager.chatWith(userJid);
+
+            Log.d("shit", new Gson().toJson(message));
+            chat.send(message);
+
+
+
+        });
+    }
+
+    private void sendSecretAcceptionError(String to, String dialogId, String reason) {
+        getSignedInObservable().subscribeOn(Schedulers.newThread()).subscribe(xmppConnection -> {
+            org.jivesoftware.smack.packet.Message message = new org.jivesoftware.smack.packet.Message();
+            message.addExtension(StandardExtensionElement.builder("DH-Nikita-Acc-Err", "dh-nikita-acc-err")
+                    .addAttribute("reason", reason)
+                    .addAttribute("dialogId", dialogId)
+                    .build());
+            message.addBody("EN", "DIFFIE-HELLMAN");
+
+            EntityBareJid userJid = JidCreate.entityBareFrom(to + "@" + SERVICE_NAME);
+            ChatManager chatManager = ChatManager.getInstanceFor(mConnection);
+            Chat chat = chatManager.chatWith(userJid);
+
+            Log.d("shit", new Gson().toJson(message));
+            chat.send(message);
+
+
+
+        });
+    }
+
+    private void sendSecretDialogAcception(Key b, String dialogId, String to) {
+        getSignedInObservable().subscribeOn(Schedulers.newThread()).subscribe(xmppConnection -> {
+            org.jivesoftware.smack.packet.Message message = new org.jivesoftware.smack.packet.Message();
+            message.addExtension(StandardExtensionElement.builder("DH-Nikita-Acc", "dh-nikita-acc")
+                    .addAttribute("bParameter", Utils.bytesToHex(b.getEncoded()))
+                    .addAttribute("dialogId", dialogId)
+                    .build());
+
+            message.addBody("EN", "DIFFIE-HELLMAN");
+
+            EntityBareJid userJid = JidCreate.entityBareFrom(to + "@" + SERVICE_NAME);
+            ChatManager chatManager = ChatManager.getInstanceFor(mConnection);
+            Chat chat = chatManager.chatWith(userJid);
+
+            Log.d("shit", new Gson().toJson(message));
+            chat.send(message);
+
+
+
+        });
+    }
+
+    public void sendSecretDialogInvitation(String to, BigInteger p, BigInteger g, Key a, String dialogId) {
+        getSignedInObservable().subscribeOn(Schedulers.newThread()).subscribe(xmppConnection -> {
+            org.jivesoftware.smack.packet.Message message = new org.jivesoftware.smack.packet.Message();
+            message.addExtension(StandardExtensionElement.builder("DH-Nikita-Inv", "dh-nikita-inv")
+                    .addAttribute("pParameter", p.toString())
+                    .addAttribute("gParameter", g.toString())
+
+                    .addAttribute("aParameter", Utils.bytesToHex(a.getEncoded()))
+                    .addAttribute("dialogId", dialogId)
+                    .build());
+
+            KeyAgreement aKeyAgree = KeyAgreement.getInstance("DH", "BC");
+            DHParameterSpec dhParams = new DHParameterSpec(p, g);
+            KeyPairGenerator keyGen = KeyPairGenerator.getInstance("DH", "BC");
+            keyGen.initialize(dhParams, new SecureRandom());
+            KeyPair bPair = keyGen.generateKeyPair();
+            aKeyAgree.init(bPair.getPrivate());
+            aKeyAgree.doPhase(a, true);
+
+            Log.d("***", a.getClass().getName());
+
+            message.addBody("EN", "DIFFIE-HELLMAN");
+
+            EntityBareJid userJid = JidCreate.entityBareFrom(to + "@" + SERVICE_NAME);
+            ChatManager chatManager = ChatManager.getInstanceFor(mConnection);
+            Chat chat = chatManager.chatWith(userJid);
+
+            Log.d("shit", new Gson().toJson(message));
+            chat.send(message);
+
+
+
+        });
+    }
+
+    @Override
+    public void processStanza(Stanza packet) throws SmackException.NotConnectedException, InterruptedException {
+        Log.d("***", "process Stanza");
+    }
 
 
 //    public io.reactivex.Observable<XMPPConnection> loginrx() {

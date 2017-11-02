@@ -20,7 +20,7 @@ import java.io.IOException;
 public class RegistrationIntentService extends IntentService {
 
     public RegistrationIntentService() {
-        super("net.xlebnick.geechat.gcmregistrationservice");
+        super("com.messiah.messenger");
 
         Log.d("***", "reg service ");
     }
@@ -34,13 +34,8 @@ public class RegistrationIntentService extends IntentService {
                     GoogleCloudMessaging.INSTANCE_ID_SCOPE, null);
             Log.d("***", "token" + token);
             Utils.saveGcmToken(this, token);
-            new AsyncTask<Void, Void, Void>() {
-                @Override
-                protected Void doInBackground(Void... params) {
-                    XmppHelper.getInstance().saveGcmToken(Utils.getGcmToken(CozyChatApplication.getContext()));
-                    return null;
-                }
-            };
+
+            XmppHelper.getInstance().saveGcmToken(Utils.getGcmToken(CozyChatApplication.getContext()));
         } catch (IOException e) {
             e.printStackTrace();
         }

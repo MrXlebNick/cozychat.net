@@ -12,6 +12,8 @@ import com.orm.dsl.Unique;
 
 public class Message extends SugarRecord {
 
+    public enum Status {SENT, DELIVERED, READ, ERROR}
+
     public String body;
     public long time;
     public boolean isFromMe;
@@ -21,9 +23,14 @@ public class Message extends SugarRecord {
     public String type = Constants.MESSAGE_TYPE_TEXT;
     @Unique
     public String messageId;
+    public String dialogId;
+    public Status status;
+    public String error;
+
     public Message() {
         read = false;
     }
+
 
     @Override
     public long save() {

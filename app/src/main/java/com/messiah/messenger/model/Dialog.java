@@ -19,6 +19,7 @@ public class Dialog {
     public User peer;
     public boolean isFromMe;
     public Context context;
+    public String dialogId ;
 
 
     public Dialog(Context context, String opponent) {

@@ -48,7 +48,7 @@ public class XmppService extends Service {
                 }
             }
         }.execute();
-        return START_NOT_STICKY;
+        return START_STICKY;
     }
 
     @Override

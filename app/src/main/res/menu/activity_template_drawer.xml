@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <group android:checkableBehavior="single"
         android:id="@+id/menu_top">
@@ -16,10 +17,6 @@
             android:icon="@drawable/ic_account_multiple"
             android:title="@string/nav_contacts" />
         <item
-            android:id="@+id/nav_dialpad"
-            android:icon="@drawable/ic_dialpad"
-            android:title="@string/nav_dialing" />
-        <item
             android:id="@+id/nav_logs"
             android:icon="@drawable/ic_dialpad"
             android:title="Send logs" />
@@ -28,6 +25,11 @@
     <group
         android:checkableBehavior="none"
         android:id="@+id/menu_exit">
+
+        <item
+            android:id="@+id/nav_settings"
+            android:icon="@drawable/settings"
+            android:title="@string/nav_dialing" />
         <item
             android:id="@+id/nav_exit"
             android:icon="@drawable/ic_exit_to_app"

@@ -16,6 +16,8 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -111,9 +113,6 @@ public class UserListFragment extends LoadableFragment {
                             }
                             user.save();
                         }
-
-
-
                         ((UserAdapter) recyclerView.getAdapter()).setValues(usrs);
 
                         fab.setOnClickListener(v -> {
@@ -214,6 +213,25 @@ public class UserListFragment extends LoadableFragment {
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_user_list, container, false);
 
+        EditText editText = (EditText) view.findViewById(R.id.search_box);
+
+        editText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+
+            }
+        });
+
         Context context = view.getContext();
         recyclerView = (RecyclerView) view.findViewById(R.id.list);
         recyclerView.setLayoutManager(new LinearLayoutManager(context));
@@ -275,6 +293,8 @@ public class UserListFragment extends LoadableFragment {
     public interface OnListFragmentInteractionListener {
         // TODO: Update argument type and name
         void onListFragmentInteraction(User item);
+
+        void onListFragmentInteraction(User peer, String dialogId);
     }
 
 }

@@ -26,6 +26,7 @@ import android.util.Base64;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
 
+import com.messiah.messenger.Constants;
 import com.messiah.messenger.CozyChatApplication;
 import com.messiah.messenger.R;
 import com.messiah.messenger.activity.MainActivity;
@@ -36,7 +37,6 @@ import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.MessageDigest;
@@ -48,15 +48,18 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
+
+import io.reactivex.functions.Action;
 
 /**
  * Created by XlebNick for CMessenger.
  */
 
 public class Utils {
-    public static final String FROM_PHONE = "from_phone";
-    private static final String DB_NAME = "cozychat.net";
     private static final String SPREFS_FIELD_PHONE = "phone";
     private static final String SPREFS_FIELD_SIP = "sip";
     private static final String SPREFS_FIELD_GCM_TOKEN = "gcm_token";
@@ -66,12 +69,12 @@ public class Utils {
 
     public static void putPhoneNumber(Context context, String phoneNumber) {
 
-        SharedPreferences sharedPreferences = context.getSharedPreferences(DB_NAME, Context.MODE_PRIVATE);
+        SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.DB_NAME, Context.MODE_PRIVATE);
         sharedPreferences.edit().putString(SPREFS_FIELD_PHONE, phoneNumber).apply();
     }
 
     public static String getPhoneNumber(Context context) {
-        return context.getSharedPreferences(DB_NAME, Context.MODE_PRIVATE).getString(SPREFS_FIELD_PHONE, null);
+        return context.getSharedPreferences(Constants.DB_NAME, Context.MODE_PRIVATE).getString(SPREFS_FIELD_PHONE, null);
     }
 
     public static ArrayList<User> getAllContacts(Context context) {
@@ -119,7 +122,7 @@ public class Utils {
         }
 
         String title = "";
-        String content = "";
+        String content;
         if (unreadMessages.size() == 0) {
             Log.d("***", " 0");
             return;
@@ -138,6 +141,7 @@ public class Utils {
             }
 
             for (String fromPhone : from) {
+                if (!TextUtils.isEmpty(title.trim()))
                 title += fromPhone + ", ";
 
             }
@@ -156,7 +160,7 @@ public class Utils {
 
         Intent resultIntent = new Intent(context, MainActivity.class);
         if (unreadMessages.size() == 1) {
-            resultIntent.putExtra(FROM_PHONE, unreadMessages.get(0).sender);
+            resultIntent.putExtra(Constants.FROM_PHONE, unreadMessages.get(0).sender);
         }
         TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
         stackBuilder.addParentStack(MainActivity.class);
@@ -174,13 +178,33 @@ public class Utils {
 
     }
 
-    public static String encode(String s) {
-
-        return base64Encode(xorWithKey(s.getBytes(), getCertificateSHA1Fingerprint().getBytes()));
+    public static String randomString() {
+        return UUID.randomUUID().toString().replace("-", "");
+//        Random generator = new Random();
+//        StringBuilder randomStringBuilder = new StringBuilder();
+//        char tempChar;
+//        for (int i = 0; i < 32; i++){
+//            tempChar = (char) (generator.nextInt(96) + 32);
+//            randomStringBuilder.append(tempChar);
+//        }
+//        return randomStringBuilder.toString();
     }
 
-    public static String decode(String s) {
-        String result = new String(xorWithKey(base64Decode(s), getCertificateSHA1Fingerprint().getBytes()));
+    public static String encode(String s, byte[] key) {
+        return base64Encode(xorWithKey(s.getBytes(), key));
+    }
+
+    public static String bytesToHex(byte[] in) {
+
+        final StringBuilder builder = new StringBuilder();
+        for(byte b : in) {
+            builder.append(String.format("%02x", b));
+        }
+        return builder.toString();
+    }
+
+    public static String decode(String s, byte[] key) {
+        String result = new String(xorWithKey(base64Decode(s), key));
         Log.d("encrypt-decode", result + " " + s);
         return result;
     }
@@ -271,27 +295,27 @@ public class Utils {
 
     public static void putSipNumber(Context context, String mSipNumber) {
 
-        SharedPreferences sharedPreferences = context.getSharedPreferences(DB_NAME, Context.MODE_PRIVATE);
+        SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.DB_NAME, Context.MODE_PRIVATE);
         sharedPreferences.edit().putString(SPREFS_FIELD_SIP, mSipNumber).apply();
     }
 
 
     public static String getSipNumber(Context context) {
-        context.getSharedPreferences(DB_NAME, Context.MODE_PRIVATE);
-        Log.d("***", "text is " + context.getSharedPreferences(DB_NAME, Context.MODE_PRIVATE).getString(SPREFS_FIELD_SIP, null));
-        return context.getSharedPreferences(DB_NAME, Context.MODE_PRIVATE).getString(SPREFS_FIELD_SIP, null);
+        context.getSharedPreferences(Constants.DB_NAME, Context.MODE_PRIVATE);
+        Log.d("***", "text is " + context.getSharedPreferences(Constants.DB_NAME, Context.MODE_PRIVATE).getString(SPREFS_FIELD_SIP, null));
+        return context.getSharedPreferences(Constants.DB_NAME, Context.MODE_PRIVATE).getString(SPREFS_FIELD_SIP, null);
     }
 
 
     public static void saveGcmToken(Context context, String token) {
 
 
-        SharedPreferences sharedPreferences = context.getSharedPreferences(DB_NAME, Context.MODE_PRIVATE);
+        SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.DB_NAME, Context.MODE_PRIVATE);
         sharedPreferences.edit().putString(SPREFS_FIELD_GCM_TOKEN, token).apply();
     }
 
     public static String getGcmToken(Context mContext) {
-        return mContext.getSharedPreferences(DB_NAME, Context.MODE_PRIVATE).getString(SPREFS_FIELD_GCM_TOKEN, null);
+        return mContext.getSharedPreferences(Constants.DB_NAME, Context.MODE_PRIVATE).getString(SPREFS_FIELD_GCM_TOKEN, null);
     }
 
     public static String getMimeType(String url) {
@@ -480,8 +504,6 @@ public class Utils {
             out = null;
 
 
-        } catch (FileNotFoundException fnfe1) {
-            Log.e("tag", fnfe1.getMessage());
         } catch (Exception e) {
             Log.e("tag", e.getMessage());
         }
@@ -490,17 +512,38 @@ public class Utils {
     }
 
     public static void removeAuthData(Context context) {
-        context.getSharedPreferences(DB_NAME, Context.MODE_PRIVATE).edit().remove(SPREFS_FIELD_PHONE).apply();
+        context.getSharedPreferences(Constants.DB_NAME, Context.MODE_PRIVATE).edit().remove(SPREFS_FIELD_PHONE).apply();
     }
 
     public static boolean isFirstTime(Context context) {
 
 
-        if (!context.getSharedPreferences(DB_NAME, Context.MODE_PRIVATE).getBoolean(SPREFS_FIELD_IS_FIRST_TIME, true)) {
+        if (!context.getSharedPreferences(Constants.DB_NAME, Context.MODE_PRIVATE).getBoolean(SPREFS_FIELD_IS_FIRST_TIME, true)) {
             return false;
         }
-        context.getSharedPreferences(DB_NAME, Context.MODE_PRIVATE).edit().putBoolean(SPREFS_FIELD_IS_FIRST_TIME, false).apply();
+        context.getSharedPreferences(Constants.DB_NAME, Context.MODE_PRIVATE).edit().putBoolean(SPREFS_FIELD_IS_FIRST_TIME, false).apply();
         return true;
+
+    }
+
+    public static boolean isSoundOnMessageOn(Context context) {
+        return context.getSharedPreferences(Constants.DB_NAME, Context.MODE_PRIVATE).getBoolean("ifSendMessageWithSound", false);
+    }
+
+    public static void sendSecretAcceptionNotification(String from, Action action) {
+        NotificationCompat.Builder mBuilder =
+                new NotificationCompat.Builder(CozyChatApplication.getContext())
+                        .setSmallIcon(R.drawable.ic_message_text_white)
+                        .setContentTitle("New Secret Invitation")
+                        .setAutoCancel(true)
+                        .setContentText(from + " invites you to start new Secret");
+        mBuilder.setDefaults(NotificationCompat.DEFAULT_ALL);
+//        mBuilder.addAction()
+        NotificationManager mNotificationManager =
+                (NotificationManager) CozyChatApplication.getContext()
+                        .getSystemService(Context.NOTIFICATION_SERVICE);
+
+        mNotificationManager.notify(1620, mBuilder.build());
 
     }
 }

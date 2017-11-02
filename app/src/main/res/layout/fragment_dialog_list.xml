@@ -4,16 +4,38 @@
     xmlns:tools="http://schemas.android.com/tools" android:layout_height="match_parent"
              android:layout_width="match_parent">
 
-    <android.support.v7.widget.RecyclerView
-        android:id="@+id/list"
-        android:name="net.xlebnick.geechat.fragment.DialogListFragment"
+    <android.support.v4.view.ViewPager
+        android:id="@+id/view_pager"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginLeft="16dp"
-        android:layout_marginRight="16dp"
-        app:layoutManager="LinearLayoutManager"
-        tools:context="com.messiah.messenger.fragment.DialogListFragment"
-        tools:listitem="@layout/fragment_dialog" />
+        android:layout_height="match_parent">
+
+        <android.support.v4.view.PagerTitleStrip
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:background="@color/colorPrimary"
+            android:id="@+id/pager_titles"/>
+        <android.support.v7.widget.RecyclerView
+            android:id="@+id/list"
+            android:name="net.xlebnick.geechat.fragment.DialogListFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginLeft="16dp"
+            android:layout_marginRight="16dp"
+            app:layoutManager="LinearLayoutManager"
+            tools:context="com.messiah.messenger.fragment.DialogListFragment"
+            tools:listitem="@layout/fragment_dialog" />
+        <android.support.v7.widget.RecyclerView
+            android:id="@+id/secret_list"
+            android:name="net.xlebnick.geechat.fragment.DialogListFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginLeft="16dp"
+            android:layout_marginRight="16dp"
+            app:layoutManager="LinearLayoutManager"
+            tools:context="com.messiah.messenger.fragment.DialogListFragment"
+            tools:listitem="@layout/fragment_dialog" />
+    </android.support.v4.view.ViewPager>
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

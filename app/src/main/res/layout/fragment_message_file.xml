@@ -12,6 +12,7 @@
         android:layout_height="wrap_content"
         android:id="@+id/author"
         android:textSize="10sp"
+        android:visibility="gone"
         android:text="Артём"/>
 
     <ImageView
