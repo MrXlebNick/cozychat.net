@@ -6,6 +6,7 @@ import android.os.AsyncTask;
 import android.support.v4.content.LocalBroadcastManager;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.Patterns;
 import android.webkit.MimeTypeMap;
 
 import com.google.gson.Gson;
@@ -19,7 +20,6 @@ import com.messiah.messenger.utils.FileIOApi;
 import com.messiah.messenger.utils.FileResponse;
 import com.messiah.messenger.utils.Utils;
 
-import org.bouncycastle.jcajce.provider.asymmetric.dh.BCDHPublicKey;
 import org.greenrobot.eventbus.EventBus;
 import org.jivesoftware.smack.AbstractXMPPConnection;
 import org.jivesoftware.smack.ConnectionConfiguration;
@@ -33,7 +33,7 @@ import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.chat2.Chat;
 import org.jivesoftware.smack.chat2.ChatManager;
 import org.jivesoftware.smack.chat2.IncomingChatMessageListener;
-import org.jivesoftware.smack.packet.DefaultExtensionElement;
+import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.StandardExtensionElement;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.parsing.StandardExtensionElementProvider;
@@ -43,6 +43,7 @@ import org.jivesoftware.smack.sasl.provided.SASLDigestMD5Mechanism;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 import org.jivesoftware.smackx.iqregister.AccountManager;
+import org.jivesoftware.smackx.iqregister.packet.Registration;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptManager;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
@@ -75,13 +76,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import javax.crypto.KeyAgreement;
-import javax.crypto.interfaces.DHPublicKey;
 import javax.crypto.spec.DHParameterSpec;
 
 import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
@@ -149,7 +151,6 @@ public class XmppHelper implements IncomingChatMessageListener, StanzaListener {
         ProviderManager.addExtensionProvider("DH-Nikita-Inv",
                 "dh-nikita-inv",
                 new StandardExtensionElementProvider());
-
         ProviderManager.addExtensionProvider("DH-Nikita-Acc",
                 "dh-nikita-acc",
                 new StandardExtensionElementProvider());
@@ -177,6 +178,7 @@ public class XmppHelper implements IncomingChatMessageListener, StanzaListener {
                     .setHost(SERVICE_NAME)
                     .setConnectTimeout(10000)
                     .setPort(5222)
+                    .setSendPresence(true)
                     .setDebuggerEnabled(true)
                     .setSecurityMode(ConnectionConfiguration.SecurityMode.disabled)
                     .build();
@@ -288,6 +290,7 @@ public class XmppHelper implements IncomingChatMessageListener, StanzaListener {
 
                 @Override
                 public void connectionClosedOnError(Exception e) {
+                    e.printStackTrace();
                     emitter.onError(e);
                     mConnection.removeConnectionListener(this);
                 }
@@ -483,8 +486,23 @@ public class XmppHelper implements IncomingChatMessageListener, StanzaListener {
             for (Map.Entry<String, String> entry : properties.entrySet()){
 
                 Log.d("profile", entry.getKey() + " " + entry.getValue());
-                if (!(entry.getKey().equals("niknam") && entry.getValue().equals("NickName")))
+                if (!(entry.getKey().equals("niknam") && entry.getValue().equals("NickName"))){
                     vCard.setField(entry.getKey(), entry.getValue());
+                    AccountManager am= AccountManager.getInstance(mConnection);
+                    Set<String> i=am.getAccountAttributes();
+                    HashMap<String, String> map = new HashMap();
+                    for (String name  : i){
+                        map.put(name,am.getAccountAttribute(name));
+                    }
+                    map.put("name",entry.getValue());
+// create a registration packet
+                    Registration reg=new Registration(map);
+                    reg.setType(IQ.Type.set); // we''re setting the attributes
+                    reg.setFrom(mConnection.getUser()); // set the from address to be from this user
+                    reg.setTo(JidCreate.from(mConnection.getHost()));
+                    mConnection.sendStanza(reg); // send the packet
+                }
+
             }
             vCard.save(mConnection);
 //            VCardManager.getInstanceFor(mConnection).saveVCard(vCard);
@@ -669,6 +687,57 @@ public class XmppHelper implements IncomingChatMessageListener, StanzaListener {
 
     }
 
+    public io.reactivex.Observable<List<User>> searchUsersrx(String s) {
+        return getSignedInObservable().subscribeOn(Schedulers.newThread()).map(xmppConnection -> {
+            boolean isPhone = Patterns.PHONE.matcher(s).matches();
+            UserSearchManager manager = new UserSearchManager(mConnection);
+            Form searchForm;
+
+            DomainBareJid searchJid = JidCreate.domainBareFrom("search." + mConnection.getServiceName());
+
+            searchForm = manager.getSearchForm(searchJid);
+            Form answerForm = searchForm.createAnswerForm();
+
+            UserSearch userSearch = new UserSearch();
+            if (isPhone){
+
+                answerForm.setAnswer("Username", true);
+                answerForm.setAnswer("search", "*" + s + "*" );
+            } else {
+                answerForm.setAnswer("Name", true);
+                answerForm.setAnswer("search", "*" + s + "*" );
+            }
+
+            ReportedData results =
+                    userSearch.sendSearchForm(mConnection, answerForm, searchJid);
+            List<User> users = new ArrayList<>();
+            List<ReportedData.Row> rows = results.getRows();
+            for (ReportedData.Row row : rows) {
+                User user = new User();
+                user.mPhoneNumber =
+                        row.getValues("Username").toString().replaceAll("[\\[\\]]", "");
+                if (row.getValues("Name") != null) {
+                    user.mFullName =
+                            row.getValues("Name").toString().replaceAll("[\\[\\]]", "");
+                }
+                if (row.getValues("Email") != null) {
+                    user.mSipNumber =
+                            row.getValues("Email").toString().replaceAll("[\\[\\]]", "");
+                }
+                if (row.getValues("sip") != null) {
+                    user.mSipNumber =
+                            row.getValues("sip").toString().replaceAll("[\\[\\]]", "");
+                }
+                users.add(user);
+            }
+
+//            getUsersTrials = 0;
+            return users;
+
+        });
+
+    }
+
     public void setMessageListener() {
 
         ChatManager chatManager = ChatManager.getInstanceFor(mConnection);
@@ -759,7 +828,7 @@ public class XmppHelper implements IncomingChatMessageListener, StanzaListener {
     }
 
     public void saveGcmToken(String token) {
-        getSignedInObservable().subscribe(xmppConnection -> {
+        getSignedInObservable().subscribeOn(Schedulers.newThread()).subscribe(xmppConnection -> {
             try {
                 VCard vCard = VCardManager.getInstanceFor(mConnection)
                         .loadVCard();
@@ -770,7 +839,8 @@ public class XmppHelper implements IncomingChatMessageListener, StanzaListener {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        });
+        },
+                Throwable::printStackTrace);
     }
 
     public io.reactivex.Observable<Boolean> sendFileMessagerx(Message mItem, String messageString) {
@@ -812,7 +882,7 @@ public class XmppHelper implements IncomingChatMessageListener, StanzaListener {
 //        });
 //    }
 
-    private io.reactivex.Observable<XMPPConnection> loginrx(){
+    public io.reactivex.Observable<XMPPConnection> loginrx(){
         if (mConnection == null) {
             init();
         }

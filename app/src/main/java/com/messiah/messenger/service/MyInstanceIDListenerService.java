@@ -1,14 +1,17 @@
 package com.messiah.messenger.service;
 
-import android.content.Intent;
+import android.util.Log;
 
-import com.google.android.gms.iid.InstanceIDListenerService;
+import com.google.firebase.iid.FirebaseInstanceId;
+import com.google.firebase.iid.FirebaseInstanceIdService;
 import com.messiah.messenger.CozyChatApplication;
+import com.messiah.messenger.helpers.XmppHelper;
+import com.messiah.messenger.utils.Utils;
 
 /**
  * Created by XlebNick for CMessenger.
  */
-public class MyInstanceIDListenerService extends InstanceIDListenerService {
+public class MyInstanceIDListenerService extends FirebaseInstanceIdService {
 
     private static final String TAG = "MyInstanceIDLS";
 
@@ -21,9 +24,14 @@ public class MyInstanceIDListenerService extends InstanceIDListenerService {
     @Override
     public void onTokenRefresh() {
         // Fetch updated Instance ID token and notify our app's server of any changes (if applicable).
-        Intent intent = new Intent(CozyChatApplication.getContext(), RegistrationIntentService.class);
-        intent.putExtra("register", true); //register=true
-        intent.putExtra("tokenRefreshed", true); //tokenRefreshed = true
-        CozyChatApplication.getContext().startService(intent);
+        String refreshedToken = FirebaseInstanceId.getInstance().getToken();
+        Log.d("***", "token " + refreshedToken);
+        Utils.saveGcmToken(this, refreshedToken);
+        try {
+
+            XmppHelper.getInstance().saveGcmToken(Utils.getGcmToken(CozyChatApplication.getContext()));
+        } catch (Exception e){
+            e.printStackTrace();
+        }
     }
 }

@@ -3,7 +3,6 @@ package com.messiah.messenger.fragment;
 import android.content.Context;
 import android.os.Bundle;
 import android.support.v4.view.PagerAdapter;
-import android.support.v4.view.PagerTitleStrip;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -17,7 +16,6 @@ import android.widget.TextView;
 
 import com.messiah.messenger.R;
 import com.messiah.messenger.adapter.DialogAdapter;
-import com.messiah.messenger.helpers.XmppHelper;
 import com.messiah.messenger.model.Dialog;
 import com.messiah.messenger.model.Message;
 import com.messiah.messenger.model.SecretDialogData;
@@ -27,8 +25,6 @@ import org.greenrobot.eventbus.Subscribe;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Observable;
-import java.util.Observer;
 
 /**
  * A fragment representing a list of Items.

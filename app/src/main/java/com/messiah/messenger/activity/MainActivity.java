@@ -27,21 +27,18 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.gcm.GoogleCloudMessaging;
-import com.google.gson.Gson;
 import com.messiah.messenger.Constants;
 import com.messiah.messenger.R;
 import com.messiah.messenger.fragment.DialogListFragment;
 import com.messiah.messenger.fragment.MessageFragment;
+import com.messiah.messenger.fragment.PreferenceFragment;
 import com.messiah.messenger.fragment.ProfileInfoFragment;
 import com.messiah.messenger.fragment.UserListFragment;
 import com.messiah.messenger.helpers.SipHelper;
 import com.messiah.messenger.helpers.XmppHelper;
 import com.messiah.messenger.model.User;
-import com.messiah.messenger.service.XmppService;
 import com.messiah.messenger.service.PjsipService;
-import com.messiah.messenger.service.RegistrationIntentService;
-import com.messiah.messenger.utils.CryptoUtils;
+import com.messiah.messenger.service.XmppService;
 import com.messiah.messenger.utils.Utils;
 import com.squareup.picasso.Picasso;
 
@@ -50,21 +47,10 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.math.BigInteger;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.MessageDigest;
-import java.security.SecureRandom;
-import java.security.Security;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.Random;
-
-import javax.crypto.KeyAgreement;
-import javax.crypto.spec.DHParameterSpec;
-import javax.crypto.spec.DHPublicKeySpec;
 
 import io.github.rockerhieu.emojicon.EmojiconGridFragment;
 import io.github.rockerhieu.emojicon.EmojiconsFragment;
@@ -85,7 +71,6 @@ public class MainActivity extends AppCompatActivity
     private static final String PROPERTY_APP_VERSION = "appVersion";
     private final static String TAG = "LaunchActivity";
     protected String SENDER_ID = "Your_sender_id";
-    private GoogleCloudMessaging gcm = null;
     private String regid = null;
     private Context context = null;
 
@@ -105,6 +90,12 @@ public class MainActivity extends AppCompatActivity
                     Intent.FLAG_ACTIVITY_NO_HISTORY);
             startActivity(intent);
             return;
+        }
+
+        String token = Utils.getGcmToken(this);
+        Log.d("***", "token " + token);
+        if (!TextUtils.isEmpty(token)) {
+            XmppHelper.getInstance().saveGcmToken(token);
         }
 
         startService(new Intent(this, PjsipService.class));
@@ -139,8 +130,6 @@ public class MainActivity extends AppCompatActivity
                 .findViewById(R.id.text_phone)).setText(Utils.getPhoneNumber(this));
 
         startService(new Intent(this, XmppService.class));
-        startService(new Intent(this, RegistrationIntentService.class));
-
 
         XmppHelper.getInstance().getUserPropertiesrx()
                 .observeOn(AndroidSchedulers.mainThread())
@@ -231,8 +220,9 @@ public class MainActivity extends AppCompatActivity
         } else if (id == R.id.nav_contacts) {
             fragment = UserListFragment.newInstance();
         } else if (id == R.id.nav_dialogs) {
-
             fragment = new DialogListFragment();
+        }else if (id == R.id.nav_settings) {
+            fragment = new PreferenceFragment();
         }
 
         if (id == R.id.nav_exit) {
@@ -257,7 +247,6 @@ public class MainActivity extends AppCompatActivity
 //                return true;
 
             }
-
 
         }
 

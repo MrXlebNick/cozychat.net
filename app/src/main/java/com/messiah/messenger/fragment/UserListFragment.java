@@ -1,18 +1,12 @@
 package com.messiah.messenger.fragment;
 
-import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
-import android.provider.ContactsContract;
 import android.support.design.widget.FloatingActionButton;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -24,17 +18,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 
+import com.github.rahatarmanahmed.cpv.CircularProgressView;
 import com.messiah.messenger.R;
 import com.messiah.messenger.adapter.UserAdapter;
 import com.messiah.messenger.helpers.XmppHelper;
 import com.messiah.messenger.model.User;
-import com.messiah.messenger.utils.Utils;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.schedulers.Schedulers;
 import xdroid.toaster.Toaster;
 
 /**
@@ -51,6 +41,7 @@ public class UserListFragment extends LoadableFragment {
 
     private OnListFragmentInteractionListener mListener;
     private RecyclerView recyclerView;
+    private CircularProgressView searchProgressView;
     private XmppHelper connection;
     private FloatingActionButton fab;
 
@@ -84,107 +75,108 @@ public class UserListFragment extends LoadableFragment {
 
     @Override
     protected void onLoadStart() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
-                getActivity().checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.READ_CONTACTS}, PERMISSIONS_REQUEST_READ_CONTACTS);
-            return;
-
-        }
-        new AsyncTask<Void, Void, Void>() {
-            List<User> contacts;
-            List<User> friends = new ArrayList<>();
-
-            @Override
-            protected Void doInBackground(Void... params) {
-                connection = XmppHelper.getInstance();
-                connection.getAllUsersrx()
-                        .observeOn(AndroidSchedulers.mainThread()).subscribe(usrs -> {
-                    if (usrs != null) {
-                        for (User user : usrs) {
-                            for (User contact : contacts) {
-                                if (user.mPhoneNumber.equals(contact.mPhoneNumber) && !user.mPhoneNumber.equals(Utils.getPhoneNumber(getContext()))) {
-                                    user.mFullName = contact.mFullName;
-//                                if (unreadFrom.contains(user.mPhoneNumber)){
-//                                    user.hasUnread = true;
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+//                getActivity().checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+//            requestPermissions(new String[]{Manifest.permission.READ_CONTACTS}, PERMISSIONS_REQUEST_READ_CONTACTS);
+//            return;
+//
+//        }
+//        new AsyncTask<Void, Void, Void>() {
+//            List<User> contacts;
+//            List<User> friends = new ArrayList<>();
+//
+//            @Override
+//            protected Void doInBackground(Void... params) {
+//                connection = XmppHelper.getInstance();
+//                connection.getAllUsersrx()
+//                        .observeOn(AndroidSchedulers.mainThread()).subscribe(usrs -> {
+//                    if (usrs != null) {
+//                        for (User user : usrs) {
+//                            for (User contact : contacts) {
+//                                if (user.mPhoneNumber.equals(contact.mPhoneNumber) && !user.mPhoneNumber.equals(Utils.getPhoneNumber(getContext()))) {
+//                                    user.mFullName = contact.mFullName;
+////                                if (unreadFrom.contains(user.mPhoneNumber)){
+////                                    user.hasUnread = true;
+////                                }
+//                                    friends.add(user);
+//                                    break;
 //                                }
-                                    friends.add(user);
-                                    break;
-                                }
-                            }
-                            user.save();
-                        }
-                        ((UserAdapter) recyclerView.getAdapter()).setValues(usrs);
-
-                        fab.setOnClickListener(v -> {
-                            View dialogLayout = View.inflate(getContext(), R.layout.invite_friend_dialog, null);
-                            final EditText editText = (EditText) dialogLayout.findViewById(R.id.et_phone);
-                            new AlertDialog.Builder(getContext())
-                                    .setView(dialogLayout)
-                                    .setTitle(R.string.enter_phone)
-                                    .setPositiveButton(R.string.invite,
-                                            (dialog, which) -> {
-                                                String invitingNumber = editText.getText().toString();
-                                                if (invitingNumber.charAt(0) == '8')
-                                                    invitingNumber = "+7" + invitingNumber.substring(1);
-
-                                                for (User user : usrs) {
-                                                    if (user.mPhoneNumber.equals(invitingNumber)) {
-
-                                                        if (friends.contains(user)) {
-                                                            Toaster.toast(getString(R.string.user_already_in_contact_list));
-                                                            return;
-                                                        }
-
-                                                        Toaster.toast(getString(R.string.user_is_registered_but_not_friended));
-
-                                                        Intent intent = new Intent(Intent.ACTION_INSERT);
-                                                        intent.setType(ContactsContract.Contacts.CONTENT_TYPE);
-
-                                                        intent.putExtra(ContactsContract.Intents.Insert.NAME, user.mFullName);
-                                                        intent.putExtra(ContactsContract.Intents.Insert.PHONE, user.mPhoneNumber);
-
-                                                        startActivityForResult(intent, PICK_CONTACT);
-                                                        return;
-                                                    }
-                                                }
-
-
-                                                Toaster.toast(getString(R.string.user_not_using_app));
-                                                Intent intent = new Intent(Intent.ACTION_SENDTO);
-                                                intent.setData(Uri.parse("smsto:" + invitingNumber));
-                                                intent.putExtra("sms_body", "Hello! I'm using CMessenger, it's just a miracle! Give it a try!");
-                                                if (intent.resolveActivity(getContext().getPackageManager()) != null) {
-                                                    startActivity(intent);
-                                                }
-                                            })
-                                    .setNegativeButton(R.string.cancel, null)
-                                    .show();
-                        });
-                        onLoaded();
-                    } else {
-                        onFailed();
-                    }
-                });
-                return null;
-            }
-
-            @Override
-            protected void onPreExecute() {
-
-                contacts = Utils.getAllContacts(getContext());
-                super.onPreExecute();
-
-            }
-
-            @Override
-            protected void onPostExecute(Void aVoid) {
-
-
-
-
-                super.onPostExecute(aVoid);
-            }
-        }.execute();
+//                            }
+//                            user.save();
+//                        }
+//                        ((UserAdapter) recyclerView.getAdapter()).setValues(usrs);
+//
+//                        fab.setOnClickListener(v -> {
+//                            View dialogLayout = View.inflate(getContext(), R.layout.invite_friend_dialog, null);
+//                            final EditText editText = (EditText) dialogLayout.findViewById(R.id.et_phone);
+//                            new AlertDialog.Builder(getContext())
+//                                    .setView(dialogLayout)
+//                                    .setTitle(R.string.enter_phone)
+//                                    .setPositiveButton(R.string.invite,
+//                                            (dialog, which) -> {
+//                                                String invitingNumber = editText.getText().toString();
+//                                                if (invitingNumber.charAt(0) == '8')
+//                                                    invitingNumber = "+7" + invitingNumber.substring(1);
+//
+//                                                for (User user : usrs) {
+//                                                    if (user.mPhoneNumber.equals(invitingNumber)) {
+//
+//                                                        if (friends.contains(user)) {
+//                                                            Toaster.toast(getString(R.string.user_already_in_contact_list));
+//                                                            return;
+//                                                        }
+//
+//                                                        Toaster.toast(getString(R.string.user_is_registered_but_not_friended));
+//
+//                                                        Intent intent = new Intent(Intent.ACTION_INSERT);
+//                                                        intent.setType(ContactsContract.Contacts.CONTENT_TYPE);
+//
+//                                                        intent.putExtra(ContactsContract.Intents.Insert.NAME, user.mFullName);
+//                                                        intent.putExtra(ContactsContract.Intents.Insert.PHONE, user.mPhoneNumber);
+//
+//                                                        startActivityForResult(intent, PICK_CONTACT);
+//                                                        return;
+//                                                    }
+//                                                }
+//
+//
+//                                                Toaster.toast(getString(R.string.user_not_using_app));
+//                                                Intent intent = new Intent(Intent.ACTION_SENDTO);
+//                                                intent.setData(Uri.parse("smsto:" + invitingNumber));
+//                                                intent.putExtra("sms_body", "Hello! I'm using CMessenger, it's just a miracle! Give it a try!");
+//                                                if (intent.resolveActivity(getContext().getPackageManager()) != null) {
+//                                                    startActivity(intent);
+//                                                }
+//                                            })
+//                                    .setNegativeButton(R.string.cancel, null)
+//                                    .show();
+//                        });
+//                        onLoaded();
+//                    } else {
+//                        onFailed();
+//                    }
+//                });
+//                return null;
+//            }
+//
+//            @Override
+//            protected void onPreExecute() {
+//
+//                contacts = Utils.getAllContacts(getContext());
+//                super.onPreExecute();
+//
+//            }
+//
+//            @Override
+//            protected void onPostExecute(Void aVoid) {
+//
+//
+//
+//
+//                super.onPostExecute(aVoid);
+//            }
+//        }.execute();
+        onLoaded();
     }
 
     @Override
@@ -214,6 +206,7 @@ public class UserListFragment extends LoadableFragment {
         View view = inflater.inflate(R.layout.fragment_user_list, container, false);
 
         EditText editText = (EditText) view.findViewById(R.id.search_box);
+        searchProgressView = (CircularProgressView) view.findViewById(R.id.search_loader);
 
         editText.addTextChangedListener(new TextWatcher() {
             @Override
@@ -223,7 +216,7 @@ public class UserListFragment extends LoadableFragment {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-
+                search(s.toString());
             }
 
             @Override
@@ -243,6 +236,49 @@ public class UserListFragment extends LoadableFragment {
         fab = (FloatingActionButton) view.findViewById(R.id.fab);
 
         return super.onCreateView(inflater, container, savedInstanceState, view);
+    }
+
+    private void search(String s) {
+        new AsyncTask<Void, Void, Void>() {
+
+            @Override
+            protected Void doInBackground(Void... params) {
+                connection = XmppHelper.getInstance();
+                connection.searchUsersrx(s)
+                        .observeOn(AndroidSchedulers.mainThread()).subscribe(usrs -> {
+                    if (usrs != null) {
+
+                        ((UserAdapter) recyclerView.getAdapter()).setValues(usrs);
+
+
+                        onLoaded();
+
+                        searchProgressView.setVisibility(View.GONE);
+                        recyclerView.setVisibility(View.VISIBLE);
+                    } else {
+                        onFailed();
+
+                        searchProgressView.setVisibility(View.GONE);
+                        recyclerView.setVisibility(View.VISIBLE);
+                    }
+                });
+                return null;
+            }
+
+            @Override
+            protected void onPreExecute() {
+                super.onPreExecute();
+
+                searchProgressView.setVisibility(View.VISIBLE);
+                recyclerView.setVisibility(View.GONE);
+
+            }
+
+            @Override
+            protected void onPostExecute(Void aVoid) {
+                super.onPostExecute(aVoid);
+            }
+        }.execute();
     }
 
     @Override

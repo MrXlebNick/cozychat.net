@@ -21,6 +21,7 @@ import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.TaskStackBuilder;
+import android.support.v7.preference.PreferenceManager;
 import android.text.TextUtils;
 import android.util.Base64;
 import android.util.Log;
@@ -35,7 +36,6 @@ import com.messiah.messenger.model.User;
 
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -48,10 +48,8 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
 
 import io.reactivex.functions.Action;
 
@@ -527,7 +525,9 @@ public class Utils {
     }
 
     public static boolean isSoundOnMessageOn(Context context) {
-        return context.getSharedPreferences(Constants.DB_NAME, Context.MODE_PRIVATE).getBoolean("ifSendMessageWithSound", false);
+
+
+        return PreferenceManager.getDefaultSharedPreferences(context).getBoolean("ifSendMessageWithSound", false);
     }
 
     public static void sendSecretAcceptionNotification(String from, Action action) {

@@ -3,17 +3,14 @@ package com.messiah.messenger.fragment;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.net.sip.SipManager;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Looper;
 import android.os.SystemClock;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -25,7 +22,6 @@ import android.text.Editable;
 import android.text.Selection;
 import android.text.TextUtils;
 import android.text.TextWatcher;
-import android.util.AndroidException;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.Display;
@@ -45,7 +41,6 @@ import com.github.angads25.filepicker.model.DialogConfigs;
 import com.github.angads25.filepicker.model.DialogProperties;
 import com.github.angads25.filepicker.view.FilePickerDialog;
 import com.github.rahatarmanahmed.cpv.CircularProgressView;
-import com.google.gson.Gson;
 import com.messiah.messenger.Constants;
 import com.messiah.messenger.CozyChatApplication;
 import com.messiah.messenger.R;
@@ -64,28 +59,18 @@ import com.squareup.picasso.Picasso;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
-import org.jivesoftware.smack.SmackException;
-import org.jivesoftware.smack.XMPPException;
 
 import java.io.File;
-import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
-import java.net.URLEncoder;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.SecureRandom;
 import java.security.Security;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Observable;
-import java.util.Observer;
-import java.util.Random;
 
-import javax.crypto.KeyAgreement;
 import javax.crypto.spec.DHParameterSpec;
 
 import io.github.rockerhieu.emojicon.EmojiconEditText;
-import io.github.rockerhieu.emojicon.EmojiconGridFragment;
 import io.github.rockerhieu.emojicon.EmojiconGridView;
 import io.github.rockerhieu.emojicon.emoji.Emojicon;
 import io.reactivex.android.schedulers.AndroidSchedulers;
@@ -250,10 +235,6 @@ public class MessageFragment extends LoadableFragment  {
         setHasOptionsMenu(true);
         mediaPlayer = MediaPlayer.create(getContext(), R.raw.notif);
 
-        AudioManager audioManager = (AudioManager) CozyChatApplication.getContext().getSystemService(Context.AUDIO_SERVICE);
-        float volume = ((float) audioManager.getStreamVolume(AudioManager.STREAM_NOTIFICATION)) /
-                audioManager.getStreamVolume(AudioManager.STREAM_NOTIFICATION);
-        mediaPlayer.setVolume(volume, volume);
         final View view = inflater.inflate(R.layout.fragment_message_list, container, false);
         final Context context = view.getContext();
         recyclerView = (RecyclerView) view.findViewById(R.id.list);
@@ -362,6 +343,11 @@ public class MessageFragment extends LoadableFragment  {
                                 ((MessageAdapter) recyclerView.getAdapter()).setValues(messages);
                             });
                             if (Utils.isSoundOnMessageOn(getContext())){
+
+                                AudioManager audioManager = (AudioManager) CozyChatApplication.getContext().getSystemService(Context.AUDIO_SERVICE);
+                                float volume = ((float) audioManager.getStreamVolume(AudioManager.STREAM_NOTIFICATION)) /
+                                        audioManager.getStreamVolume(AudioManager.STREAM_NOTIFICATION);
+                                mediaPlayer.setVolume(volume, volume);
                                 mediaPlayer.start();
                             }
                         },

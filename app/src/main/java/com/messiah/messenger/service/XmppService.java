@@ -14,7 +14,6 @@ import com.messiah.messenger.helpers.XmppHelper;
  */
 public class XmppService extends Service {
 
-
     @Override
     public void onCreate() {
         super.onCreate();
@@ -24,30 +23,7 @@ public class XmppService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d("shit", "service onStartCommand");
-
-        new AsyncTask<Void, Void, Void>() {
-            @Override
-            protected Void doInBackground(Void... params) {
-                try {
-                    XmppHelper.getInstance().setMessageListener();
-                } catch (NullPointerException e){
-                    e.printStackTrace();
-                    stopSelf();
-                }
-                return null;
-            }
-
-            @Override
-            protected void onPostExecute(Void aVoid) {
-                super.onPostExecute(aVoid);
-                try {
-                    XmppHelper.getInstance().setMessageListener();
-                } catch (NullPointerException e){
-                    e.printStackTrace();
-                    stopSelf();
-                }
-            }
-        }.execute();
+        XmppHelper.getInstance().getSignedInObservable().subscribe(xmppConnection -> {}, Throwable::printStackTrace);
         return START_STICKY;
     }
 

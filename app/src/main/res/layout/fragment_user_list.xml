@@ -10,11 +10,10 @@
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
         android:layout_height="match_parent">
         <EditText android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            android:id="@+id/search_box"/>
+                  android:layout_height="wrap_content"
+                  android:hint="search..."
+                  android:id="@+id/search_box"/>
         <android.support.v7.widget.RecyclerView
-
             android:layout_below="@+id/search_box"
             android:id="@+id/list"
             android:layout_width="match_parent"
@@ -22,6 +21,11 @@
             android:layout_marginLeft="16dp"
             android:layout_marginRight="16dp"
             app:layoutManager="LinearLayoutManager" />
+        <com.github.rahatarmanahmed.cpv.CircularProgressView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            android:id="@+id/search_loader"/>
     </RelativeLayout>
 
     <android.support.design.widget.FloatingActionButton

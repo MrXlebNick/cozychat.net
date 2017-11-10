@@ -4,8 +4,6 @@ import android.content.Context;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.RingtoneManager;
-import android.net.sip.SipAudioCall;
-import android.net.sip.SipProfile;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.PowerManager;
@@ -18,14 +16,12 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.messiah.messenger.R;
-import com.messiah.messenger.helpers.SipHelper;
 import com.messiah.messenger.service.PjsipService;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.pjsip.pjsua2.CallInfo;
 import org.pjsip.pjsua2.CallOpParam;
-import org.pjsip.pjsua2.app.MyCall;
 import org.pjsip.pjsua2.pjsip_inv_state;
 import org.pjsip.pjsua2.pjsip_role_e;
 import org.pjsip.pjsua2.pjsip_status_code;
