@@ -5,17 +5,12 @@ import android.util.Log;
 import com.messiah.messenger.utils.Utils;
 import com.orm.SugarRecord;
 
-import org.bouncycastle.jcajce.provider.asymmetric.dh.BCDHPrivateKey;
-
 import java.math.BigInteger;
 import java.security.KeyFactory;
-import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
 
 /**
  * Created by Dinara on 30-Oct-17.

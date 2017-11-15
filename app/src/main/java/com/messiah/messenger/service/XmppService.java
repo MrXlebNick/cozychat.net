@@ -23,7 +23,30 @@ public class XmppService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d("shit", "service onStartCommand");
-        XmppHelper.getInstance().getSignedInObservable().subscribe(xmppConnection -> {}, Throwable::printStackTrace);
+
+//        new AsyncTask<Void, Void, Void>() {
+//            @Override
+//            protected Void doInBackground(Void... params) {
+//                try {
+//                    XmppHelper.getInstance().setMessageListener();
+//                } catch (NullPointerException e){
+//                    e.printStackTrace();
+//                    stopSelf();
+//                }
+//                return null;
+//            }
+//
+//            @Override
+//            protected void onPostExecute(Void aVoid) {
+//                super.onPostExecute(aVoid);
+//                try {
+//                    XmppHelper.getInstance().setMessageListener();
+//                } catch (NullPointerException e){
+//                    e.printStackTrace();
+//                    stopSelf();
+//                }
+//            }
+//        }.execute();
         return START_STICKY;
     }
 

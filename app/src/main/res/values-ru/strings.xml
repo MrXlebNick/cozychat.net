@@ -32,4 +32,8 @@
     <string name="choose_from_file">Выбрать из файлов</string>
     <string name="cancel">Отменить</string>
     <string name="hello_blank_fragment">hello_blank_fragment</string>
-    </resources>
+    <string name="nav_settings">Настройки</string>
+    <string name="error_login_too_short">Логин слишком короткий</string>
+    <string name="error_passwords_dont_match">Пароли не совпадают</string>
+    <string name="forgot_password">Забыли пароль?</string>
+</resources>

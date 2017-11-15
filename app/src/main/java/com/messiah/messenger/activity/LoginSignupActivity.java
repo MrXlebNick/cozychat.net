@@ -21,7 +21,6 @@ import com.google.firebase.auth.PhoneAuthCredential;
 import com.google.firebase.auth.PhoneAuthProvider;
 import com.hbb20.CountryCodePicker;
 import com.messiah.messenger.R;
-import com.messiah.messenger.helpers.XmppHelper;
 import com.messiah.messenger.service.XmppService;
 import com.messiah.messenger.utils.Utils;
 

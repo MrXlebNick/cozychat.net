@@ -7,8 +7,11 @@ import android.net.ConnectivityManager;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import com.messiah.messenger.helpers.XmppHelper;
 import com.messiah.messenger.helpers.SipHelper;
+import com.messiah.messenger.helpers.XmppHelper;
+
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
 
 /**
  * Created by XlebNick for CMessenger.
@@ -29,7 +32,7 @@ public class NetworkChangeReceiver extends BroadcastReceiver {
             new AsyncTask<Void, Void, Void>() {
                 @Override
                 protected Void doInBackground(Void... params) {
-                    XmppHelper.getInstance().getSignedInObservable();
+                    XmppHelper.getInstance().getSignedInObservable().observeOn(Schedulers.newThread());
                     SipHelper.getInstance().register();
                     return null;
                 }

@@ -33,15 +33,14 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.ViewHolder> {
     @Override
     public void onBindViewHolder(final ViewHolder holder, int position) {
         holder.mItem = mValues.get(position);
-        holder.mNameView.setText(TextUtils.isEmpty(mValues.get(position).mFullName) ? "Secret Spy" : mValues.get(position).mFullName);
-        holder.mPhoneView.setText(mValues.get(position).mPhoneNumber);
+        holder.mNameView.setText(TextUtils.isEmpty(mValues.get(position).mFullName) ? "<New User>" : mValues.get(position).mFullName);
+        if (TextUtils.isEmpty(mValues.get(position).mFullName)){
+            holder.mPhoneView.setText(mValues.get(position).mPhoneNumber);
+        }
 
-        holder.mView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (null != mListener) {
-                    mListener.onListFragmentInteraction(holder.mItem);
-                }
+        holder.mView.setOnClickListener(v -> {
+            if (null != mListener) {
+                mListener.onListFragmentInteraction(holder.mItem);
             }
         });
     }

@@ -1,7 +1,6 @@
 package com.messiah.messenger;
 
 import android.annotation.SuppressLint;
-import android.app.Application;
 import android.content.Context;
 import android.content.IntentFilter;
 import android.os.StrictMode;
@@ -12,13 +11,8 @@ import com.orm.SchemaGenerator;
 import com.orm.SugarContext;
 import com.orm.SugarDb;
 
-import org.acra.ACRA;
 import org.acra.ReportingInteractionMode;
 import org.acra.annotation.ReportsCrashes;
-import org.pjsip.pjsua2.Endpoint;
-import org.pjsip.pjsua2.EpConfig;
-import org.pjsip.pjsua2.TransportConfig;
-import org.pjsip.pjsua2.pjsip_transport_type_e;
 
 /**
  * Created by XlebNick for CMessenger.
@@ -53,7 +47,7 @@ public class CozyChatApplication extends android.support.multidex.MultiDexApplic
         super.onCreate();
         SugarContext.init(this);
 
-        ACRA.init(this);
+//        ACRA.init(this);
 
         IntentFilter filter = new IntentFilter();
         filter.addAction("android.SipDemo.INCOMING_CALL");

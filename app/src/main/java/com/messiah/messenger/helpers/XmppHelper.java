@@ -338,7 +338,6 @@ public class XmppHelper implements IncomingChatMessageListener, StanzaListener {
             VCard vCard = vCardManager.loadVCard(userJid);
             HashMap<String, String> properties = new HashMap<>();
 
-
             properties.put("username", vCard.getNickName());
             properties.put("phone", phoneNumber);
             properties.put("email", vCard.getEmailHome());
@@ -741,8 +740,7 @@ public class XmppHelper implements IncomingChatMessageListener, StanzaListener {
     public void setMessageListener() {
 
         ChatManager chatManager = ChatManager.getInstanceFor(mConnection);
-        Log.d("shit",
-                "setMessageListener " + mConnection.toString() + " " + chatManager.toString());
+        Log.d("shit", "setMessageListener " + mConnection.toString() + " " + chatManager.toString());
 //        if (chatListener == null) {
 //            chatListener = (chat, createdLocally) -> {
 //                Log.d("shit", "chatCreated");

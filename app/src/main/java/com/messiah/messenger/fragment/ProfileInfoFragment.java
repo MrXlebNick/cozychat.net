@@ -1,17 +1,9 @@
 package com.messiah.messenger.fragment;
 
-import android.Manifest;
-import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.support.annotation.Nullable;
-import android.support.design.widget.FloatingActionButton;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.text.InputType;
 import android.text.TextUtils;
@@ -22,31 +14,25 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 
-import com.google.gson.Gson;
-import com.messiah.messenger.Constants;
 import com.messiah.messenger.R;
 import com.messiah.messenger.helpers.DocumentHelper;
 import com.messiah.messenger.helpers.XmppHelper;
-import com.messiah.messenger.model.Message;
 import com.messiah.messenger.utils.FileIOApi;
 import com.messiah.messenger.utils.FileResponse;
 import com.messiah.messenger.utils.Utils;
 import com.squareup.picasso.Picasso;
 
-import org.w3c.dom.Text;
-
 import java.io.File;
 import java.util.HashMap;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.schedulers.Schedulers;
-import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -138,7 +124,10 @@ public class ProfileInfoFragment extends LoadableFragment {
             ((TextView) v).requestFocus(); //to trigger the soft input
         });
 
-        return super.onCreateView(inflater, container, savedInstanceState, view);
+
+        View result = super.onCreateView(inflater, container, savedInstanceState, view);
+        getActivity().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN);
+        return result;
     }
 
     @Override

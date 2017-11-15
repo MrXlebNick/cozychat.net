@@ -3,41 +3,26 @@ package com.messiah.messenger.helpers;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.net.sip.SipAudioCall;
-import android.net.sip.SipErrorCode;
 import android.net.sip.SipException;
 import android.net.sip.SipManager;
 import android.net.sip.SipProfile;
 import android.net.sip.SipRegistrationListener;
-import android.net.sip.SipSession;
-import android.os.AsyncTask;
-import android.os.Build;
-import android.os.Handler;
 import android.util.Log;
 
 import com.messiah.messenger.CozyChatApplication;
-import com.messiah.messenger.service.PjsipService;
 import com.messiah.messenger.utils.Utils;
 
 import org.acra.ACRA;
 import org.pjsip.pjsua2.Account;
 import org.pjsip.pjsua2.AccountConfig;
 import org.pjsip.pjsua2.AuthCredInfo;
-import org.pjsip.pjsua2.CallOpParam;
 import org.pjsip.pjsua2.Endpoint;
 import org.pjsip.pjsua2.EpConfig;
-import org.pjsip.pjsua2.LogConfig;
-import org.pjsip.pjsua2.OnNatCheckStunServersCompleteParam;
 import org.pjsip.pjsua2.OnRegStateParam;
-import org.pjsip.pjsua2.TransportConfig;
-import org.pjsip.pjsua2.pjsip_status_code;
-import org.pjsip.pjsua2.pjsip_transport_type_e;
 
 import java.text.ParseException;
 
 import io.reactivex.Observable;
-import io.reactivex.ObservableEmitter;
-import io.reactivex.ObservableOnSubscribe;
-import io.reactivex.annotations.NonNull;
 
 /**
  * Created by XlebNick for CMessenger.
